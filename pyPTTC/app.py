@@ -9,7 +9,6 @@ b) encapsulated data - container for other objects. It contains several other ob
 
 """
 
-
 import serial
 import signal
 import threading
@@ -20,7 +19,7 @@ from decimal import Decimal
 
 from serial.tools.list_ports import comports
 
-
+from crc import Crc16, Calculator
 
 class Detector:
 
@@ -29,8 +28,9 @@ class Detector:
     DATA_BITS = 8
     STOP_BIT = 1
     PARITY = None
-    FLOW_CONTROLL = None
+    FLOW_CONTROL = None
     TIMEOUT = 0.2
+
 
     def __init__(self, portname='auto'):
 
@@ -50,6 +50,8 @@ class Detector:
         self._connection_error = False
         self._status = 1
         self._context_depth = 0
+
+        self.crc_calculator = Calculator(Crc16.CCITT)
 
     def __enter__(self):
         if not self._connection_error:
@@ -77,6 +79,8 @@ class Detector:
             logging.error("".join(traceback.format_exception(exc, value=value, tb=trace)))
         return True
 
+    def get_crc(self, data):
+        return str(self.crc_calculator.checksum(data.encode('UTF-8')))
 
     def find_com_port(self) -> str:
         ports = comports()
@@ -86,46 +90,35 @@ class Detector:
         else:
             raise ConnectionError(f'No stepper driver found - may you need to define the DRIVER_NAME to one of them: {[i.manufacturer for i in ports]}')
 
-    def write(self, mes):
-        self._serial.write(mes)
+    def set_message(self, obj_id, dlen, data, crc):
+        mes = '$' + obj_id + dlen + data + crc + '#'
+        print(mes)
+        self._serial.write(mes.encode('UTF-8'))
         return self._serial.readline()
 
-    def get_service_mode(self):
-        """
-        command is used to check if service mode is enabled /disabled.
-        """
-        res = self.write(b'$04000004F300#')
-        print(res)
+    @staticmethod
+    def response_message(mes):
+        obj_id = mes[1:5]
+        dlen = mes[5:9]
+        data = mes[9:-5]
+        crc = mes[-5:-1]
+        return obj_id, dlen, data, crc
 
-    def set_service_mode(self):
-        """
-        command is used to set service mode, enabled/disable
-        """
-        res = self.write(b'$0410000D10000009101B0005016F96#')
-        print(res)
+    def set_gain(self, value):
+        if not isinstance(value, int):
+            raise TypeError('Value should be type `int`.')
+        if not 0 < value < 256:
+            raise ValueError('Value out off range. Should be 0 < value < 256')
 
-    def set_transparent_mode(self):
-        """
-        command is used to set transparent mode, enabled/disable
-        """
-        pass
+        data = f'{value}'
+        crc = self.get_crc(data)
 
-    def get_device_iden(self):
-        """
-        command is used to read configuration data
-        """
-        pass
-
-    def set_divice_iden(self):
-        """
-        command is used to set and save configuration data
-        """
-        pass
+        self.set_message(obj_id='12341', dlen='771', data=data, crc=crc)
+        return self._serial.readline()
 
 
 if __name__ == '__main__':
     with Detector() as x:
-        x.get_service_mode()
-        x.set_service_mode()
-        x.set_service_mode()
-        x.get_service_mode()
+        ans = x.set_message(obj_id='0510', dlen='0012', data='1800000E1813000501182B000500', crc='DD84')
+        ans = x.set_gain(200)
+        print(ans)
