@@ -1,12 +1,5 @@
 """
 
-The “OBJECT” is made of:
-1) OBJ_ID – field of object identifier, each object has own unique number
-2) DLEN – field of data length, size of object
-3) DATA – field includes one basic data type or container. DATA field includes one of these two components
-a) one of the basic data: cstr, int8, uint8, int16, uint16, int32, uint32, float, date_time, serial, bool (Fig. a),
-b) encapsulated data - container for other objects. It contains several other objects. (Fig. b).
-
 """
 
 import serial
@@ -21,6 +14,63 @@ from serial.tools.list_ports import comports
 
 from crc import Crc16, Calculator
 
+
+class BasicObject:
+    """
+    Template class BasicObject
+    """
+    def __init__(self, obj_id: str, dlen: str, data: str = ''):
+
+        # unique object number
+        self.obj_id = obj_id
+
+        # size of object
+        self.dlen = dlen
+
+        # basic data - only 1 package
+        self.data = data
+
+    def get_field_data(self) -> str:
+        return self.obj_id + self.dlen + self.data
+
+
+class ContainerObject(BasicObject):
+    """
+    Template class ContainerObjects
+    """
+
+    def __init__(self, obj_id: str, dlen: str, container):
+
+        # unique object number
+        self.obj_id = obj_id
+
+        # size of object
+        self.dlen = dlen
+
+        # serval other objects
+        self.container = container
+
+class QueryMessage(BasicObject):
+    """
+    QueryMessages includes commands with `get` prefix
+    """
+
+    pass
+
+class SetMessage(BasicObject):
+    """
+    SetMessages includes commands with `set` prefix and requires arguments
+    """
+
+    pass
+
+class ResponseMessage(BasicObject):
+    """
+    ResponseMessages includes object container from `device response` field
+    """
+    pass
+
+
 class Detector:
 
     DRIVER_NAME = 'FTDI'
@@ -32,6 +82,8 @@ class Detector:
     TIMEOUT = 0.2
 
 
+
+
     def __init__(self, portname='auto'):
 
         self._serial = serial.Serial()
@@ -39,7 +91,7 @@ class Detector:
             try:
                 self._serial.port = self.find_com_port()
             except ConnectionError as ce:
-                print('Stepper driver not found!')
+                print('Detector not found!')
                 self._serial.port = None
         else:
             self._serial.port = portname
@@ -61,16 +113,16 @@ class Detector:
 
             except ConnectionError as ex:
                 self._connection_error = True
-                logging.error("stage control: error entering context: \n" + str(ex))
+                logging.error(f'detector: error entering context: {ex}')
                 raise
             self._context_depth += 1
-            logging.debug(f"stage control: entered context at level {self._context_depth}")
+            logging.debug(f'detector: entered context at level {self._context_depth}')
             return self
         else:
             return None
 
     def __exit__(self, exc, value, trace):
-        logging.debug(f"stage control: leaving context from level {self._context_depth}")
+        logging.debug(f'detector: leaving context from level {self._context_depth}')
         self._context_depth -= 1
         if self._context_depth == 0:
             self._serial.close()
@@ -88,13 +140,33 @@ class Detector:
             if i.manufacturer == self.DRIVER_NAME:
                 return i.device
         else:
-            raise ConnectionError(f'No stepper driver found - may you need to define the DRIVER_NAME to one of them: {[i.manufacturer for i in ports]}')
+            raise ConnectionError(
+                f'No Device found - may you need to define the DRIVER_NAME to one of them: '
+                f'{[i.manufacturer for i in ports]}'
+            )
 
-    def set_message(self, obj_id, dlen, data, crc):
-        mes = '$' + obj_id + dlen + data + crc + '#'
-        print(mes)
+    def query_message(self, obj: BasicObject):
+
+        if not isinstance(obj, BasicObject):
+            raise TypeError('Obj should be a BasicObject')
+
+        data = obj.get_field_data()
+
+        mes = '$' + data + self.get_crc(data) + '#'
+
         self._serial.write(mes.encode('UTF-8'))
+
         return self._serial.readline()
+
+    def response_message(self, mes):
+
+        data = mes[2:-3]
+        obj_id = mes[1:3]
+        dlen = mes[3:5]
+
+        if dlen > 1:
+            for if
+
 
     @staticmethod
     def response_message(mes):
@@ -102,6 +174,13 @@ class Detector:
         dlen = mes[5:9]
         data = mes[9:-5]
         crc = mes[-5:-1]
+
+        uid = obj_id[:-3]
+        dtype = obj_id[:-4]
+
+        if dtype == b'0000':
+
+
         return obj_id, dlen, data, crc
 
     def set_gain(self, value):
