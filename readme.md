@@ -1,7 +1,9 @@
 <img 
     src="https://vigophotonics.com/app/uploads/sites/3/2022/06/ptcc-01-1024x683-1.webp"
+    href="https://vigophotonics.com/us/products/infrared-detection-modules/accessories/"
     alt="ptcc"
-    style="float: center; margin: 10px;" 
+    style="float: center; margin: 10px;"
+    <figcaption>ptcc image from </figcaption>
 />
 
 
