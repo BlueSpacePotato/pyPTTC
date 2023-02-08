@@ -16,20 +16,16 @@
 
 Python toolbox for controlling the Vigo System SmartTec PTTC-01-ADV detector.
 
----
 
 # Requirements
 
 - python >= 3.8
 
 
----
-
 # Installation
 
 - `pip install -r requierments.txt`
 
----
 
 # Example
 
@@ -39,7 +35,6 @@ import pyPTCC
 
 ```
 
----
 
 # Infos 
 
