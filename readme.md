@@ -36,7 +36,7 @@ import pyPTCC
 ```
 
 
-# Infos 
+# Infos
 
 ## BasicObject
 The BasicObject only contains single information.
@@ -63,3 +63,7 @@ The BasicObject only contains single information.
 
 
 size of object = (`obj_id` + `dlen` + size of `Data`) = (2 Byte + 2 Byte + size of `data`)
+
+
+# Known Issues
+If the detector is connected to the USB port but not to the power supply, the FDTI chip is found and the serial port opens without error. But when you send data to the port, you get no response.

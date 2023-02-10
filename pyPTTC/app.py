@@ -177,12 +177,59 @@ class ResponseMessage(TemplateMessage):
         pase field data to an return all values from the objects
         :return:
         """
-        obj = int(self.data[1:5], base=16)
-        dlen = int(self.data[5:9], base=16)
+        data = None
+
+        # obj = int(self.data[1:5], base=16)
+        # dlen = int(self.data[5:9], base=16)
         dtype = int(self.data[1:5], base=16) & 1028
-        print(obj, self.obj_id)
-        print(dlen)
-        print(dtype)
+
+        if dtype == DTYPE_CONTAINER:
+            data = self.parse_container(self.data[9:-5])
+        elif dtype == DTYPE_CONTAINER:
+            pass
+        elif dtype == DTYPE_CSTR:
+            pass
+        elif dtype == DTYPE_INT8:
+            pass
+        elif dtype == DTYPE_UINT8:
+            pass
+        elif dtype == DTYPE_INT16:
+            pass
+        elif dtype == DTYPE_UINT16:
+            pass
+        elif dtype == DTYPE_INT32:
+            pass
+        elif dtype == DTYPE_UINT32:
+            pass
+        elif dtype == DTYPE_FLOAT:
+            pass
+        elif dtype == DTYPE_DATE_TIME:
+            pass
+        elif dtype == DTYPE_SERIAL:
+            pass
+        elif dtype == DTYPE_BOOL:
+            pass
+        return data
+    @staticmethod
+    def parse_container(container):
+
+        n = 0
+        dlen_start = 4
+        dlen_stop = 8
+
+        obj_id = []
+        data = []
+
+        while n != len(container):
+            tmp = int(container[dlen_start:dlen_stop], base=16)
+            obj_id.append(container[dlen_start-4:dlen_start])
+            data.append(container[dlen_stop:dlen_stop + tmp * 2 - 8])
+
+            n += tmp * 2
+            dlen_start += tmp*2
+            dlen_stop = dlen_start + 4
+
+        return data
 
 
 class Detector:
@@ -285,19 +332,26 @@ class Detector:
             raise TypeError('Obj should be a BasicObject')
 
         mes = '$' + obj.get_field_data() + '#'
-        print(mes.encode('UTF-8'))
         self._serial.write(mes.upper().encode('UTF-8'))
 
         return self._serial.readline()
 
     def get_service_mode(self):
         obj = QueryMessage(obj_id=GET_SERVICE_MODE)
-        data = self.write_and_read(obj)
-        self.device_check_value = ResponseMessage(obj_id=SERVICE_MODE, data=self.write_and_read(obj)).parse_data()
+        rm = ResponseMessage(obj_id=SERVICE_MODE, data=self.write_and_read(obj))
+        self.device_check_value = rm.parse_data()[0]
+
+    def get_device_iden(self):
+        obj = QueryMessage(obj_id=GET_DEVICE_IDEN)
+        rm = ResponseMessage(obj_id=DEVICE_IDEN, data=self.write_and_read(obj))
+
+        self.device_iden_type, self.device_iden_firm_ver, self.device_iden_hard_ver, self.device_iden_name, \
+            self.device_iden_serial, self.device_iden_prod_date = rm.parse_data()
 
 
 if __name__ == '__main__':
     with Detector() as x:
         x.get_service_mode()
-
+        x.get_device_iden()
+        print(x.device_iden_name.decode('UTF-8'))
 
