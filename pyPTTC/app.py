@@ -273,6 +273,92 @@ class Detector:
         # device check
         self.device_check_value = None
 
+        # service mode
+        self.service_mode_enabled = None
+
+        # transparent mode
+        self.transparent_mode_enabled = None
+
+        # smarttec config
+        self.smarttec_config_variant = None
+        self.smarttec_config_no_mem_compatible = None
+
+        # smarttec monitor
+        self.smarttec_moitor_sup_on = None
+        self.smarttec_moitor_i_sup_plus = None
+        self.smarttec_moitor_i_sup_minus = None
+        self.smarttec_moitor_fan_on = None
+        self.smarttec_moitor_i_fan_plus = None
+        self.smarttec_moitor_i_tec = None
+        self.smarttec_moitor_u_tec = None
+        self.smarttec_moitor_u_sup_plus = None
+        self.smarttec_moitor_u_sup_minus = None
+        self.smarttec_moitor_t_det = None
+        self.smarttec_moitor_t_int = None
+        self.smarttec_moitor_pwm = None
+        self.smarttec_moitor_status = None
+        self.smarttec_moitor_module_type = None
+        self.monitor_th_adc = None
+
+        # module iden
+        self.module_iden_type = None
+        self.module_iden_firm_ver = None
+        self.module_iden_hard_ver = None
+        self.module_iden_name = None
+        self.module_iden_serial = None
+        self.module_iden_det_name = None
+        self.module_iden_det_serial = None
+        self.module_iden_prod_date = None
+        self.module_iden_tec_type = None
+        self.module_iden_tec_param1 = None
+        self.module_iden_tec_param2 = None
+        self.module_iden_tec_param3 = None
+        self.module_iden_tec_param4 = None
+        self.module_iden_th_param1 = None
+        self.module_iden_th_param2 = None
+        self.module_iden_th_param3 = None
+        self.module_iden_th_param4 = None
+        self.module_iden_cool_time = None
+
+        # module check
+        self.module_check_value = None
+
+        # module basic params
+        self.module_basic_params_sup_ctrl = None
+        self.module_basic_params_sup_plus = None
+        self.module_basic_params_sup_minus = None
+        self.module_basic_params_fan_ctrl = None
+        self.module_basic_params_tec_ctrl = None
+        self.module_basic_params_pwm = None
+        self.module_basic_params_i_tec_max = None
+        self.module_basic_params_t_det = None
+
+        # module user set bank
+        self.module_user_set_bank_index = None
+
+        # module smipdc monitor
+        self.module_smipdc_monitor_sup_plus = None
+        self.module_smipdc_monitor_sup_minus = None
+        self.module_smipdc_monitor_fan_plus = None
+        self.module_smipdc_monitor_tec_plus = None
+        self.module_smipdc_monitor_tec_minus = None
+        self.module_smipdc_monitor_th1 = None
+        self.module_smipdc_monitor_th2 = None
+        self.module_smipdc_monitor_u_det = None
+        self.module_smipdc_monitor_u_1st = None
+        self.module_smipdc_monitor_u_out = None
+        self.module_smipdc_monitor_temp = None
+
+        # module smipdc params
+        self.module_smipdc_params_det_u = None
+        self.module_smipdc_params_det_i = None
+        self.module_smipdc_params_gain = None
+        self.module_smipdc_params_offset = None
+        self.module_smipdc_params_varactor = None
+        self.module_smipdc_params_trans = None
+        self.module_smipdc_params_acdc = None
+        self.module_smipdc_params_bw = None
+
     def __enter__(self):
         """
         magic method - enter
@@ -327,6 +413,9 @@ class Detector:
             )
 
     def write_and_read(self, obj: TemplateMessage) -> bytes:
+        """
+
+        """
 
         if not isinstance(obj, TemplateMessage):
             raise TypeError('Obj should be a BasicObject')
