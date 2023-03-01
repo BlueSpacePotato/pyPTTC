@@ -106,10 +106,10 @@ class TemplateMessage:
         # unique object number
         self.obj_id = obj_id
 
-        self.dlen = self.get_dlen()
-
         # basic data - only 1 package
         self.data = data
+
+        self.dlen = self.get_dlen()
 
         crc_16 = Configuration(
             width=16,
@@ -165,8 +165,66 @@ class SetMessage(TemplateMessage):
     SetMessages includes commands with `set` prefix and requires arguments
     """
 
+    def __init__(self, obj_id: int, dtype: int, data: bytes = ''):
+        # unique object number
+        self.obj_id = obj_id
+
+        # basic data - only 1 package
+        self.data = data
+
+        self.dtype = dtype
+
+        self.dlen = self.get_dlen()
+
+        crc_16 = Configuration(
+            width=16,
+            polynomial=0x8005,
+            init_value=0x0000,
+            final_xor_value=0x0000,
+            reverse_input=True,
+            reverse_output=True,
+        )
+
+        self.crc_calculator = Calculator(crc_16)
     def get_dlen(self):
-        self.obj_id = 4
+        if self.dtype == DTYPE_CONTAINER:
+            l = 4 + self.data.dlen
+        elif self.dtype == DTYPE_CSTR:
+            l = 4 + len(self.data)
+        elif self.dtype == DTYPE_INT8:
+            l = 5
+        elif self.dtype == DTYPE_UINT8:
+            l = 5
+        elif self.dtype == DTYPE_INT16:
+            l = 6
+        elif self.dtype == DTYPE_UINT16:
+            l = 6
+        elif self.dtype == DTYPE_INT32:
+            l = 8
+        elif self.dtype == DTYPE_UINT32:
+            l = 8
+        elif self.dtype == DTYPE_FLOAT:
+            l = 8
+        elif self.dtype == DTYPE_DATE_TIME:
+            l = 12
+        elif self.dtype == DTYPE_SERIAL:
+            l = 8
+        elif self.dtype == DTYPE_BOOL:
+            l = 5
+        return l
+
+    def get_field_data(self, is_container: bool = False) -> str:
+        if self.dtype == DTYPE_CONTAINER:
+            self.data = self.data.get_field_data(is_container=True)
+            data = self.int_to_bytes(self.obj_id) + self.int_to_bytes(self.dlen) + self.data
+        else:
+            data = self.int_to_bytes(self.obj_id) + self.int_to_bytes(self.dlen) + self.int_to_bytes(self.data)
+
+        if is_container:
+            return data
+
+        return data + self.get_crc(data)
+
 
 
 class ResponseMessage(TemplateMessage):
@@ -424,9 +482,11 @@ class Detector:
             raise TypeError('Obj should be a BasicObject')
 
         mes = '$' + obj.get_field_data() + '#'
+        print(mes)
         self._serial.write(mes.upper().encode('UTF-8'))
-
-        return self._serial.readline()
+        ans = self._serial.readline()
+        print(ans)
+        return ans #self._serial.readline()
 
     def get_service_mode(self):
         obj = QueryMessage(obj_id=GET_SERVICE_MODE)
@@ -453,18 +513,18 @@ class Detector:
         self.smarttec_monitor_sup_on, self.smarttec_monitor_i_sup_plus, self.smarttec_monitor_u_sup_minus, \
             self.smarttec_monitor_fan_on, self.smarttec_monitor_i_fan_plus, self.smarttec_monitor_i_tec, \
             self.smarttec_monitor_u_tec, self.smarttec_monitor_u_sup_plus, self.smarttec_monitor_u_sup_minus, \
-            self.smarttec_monitor_t_det, self.smarttec_monitor_t_int, self.smarttec_monitor_pwm,\
+            self.smarttec_monitor_t_det, self.smarttec_monitor_t_int, self.smarttec_monitor_pwm, \
             self.smarttec_monitor_status, self.smarttec_monitor_module_type = rm.parse_data()
 
     def get_smarttec_mod(self):
         obj = QueryMessage(obj_id=MODULE_IDEN)
         rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(obj))
 
-        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name,\
-            self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial,\
+        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+            self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, \
             self.module_iden_prod_date, self.module_iden_tec_type, self.module_iden_th_type, self.module_iden_tec_param1, \
-            self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4,\
-            self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3,\
+            self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4, \
+            self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3, \
             self.module_iden_th_param4, self.module_iden_cool_time = rm.parse_data()
 
     def get_smarttec_mod_no_mem_default(self):
@@ -503,11 +563,11 @@ class Detector:
         obj = QueryMessage(obj_id=MODULE_IDEN)
         rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(obj))
 
-        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name,\
-            self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, self.module_iden_prod_date,\
+        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+            self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, self.module_iden_prod_date, \
             self.module_iden_tec_type, self.module_iden_th_type, self.module_iden_tec_param1, \
-            self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4,\
-            self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3,\
+            self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4, \
+            self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3, \
             self.module_iden_th_param4, self.module_iden_cool_time = rm.parse_data()
 
     def get_module_default(self):
@@ -583,9 +643,23 @@ class Detector:
             self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
             self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
 
+    def set_service_mode(self, mode: int):
+        self.service_mode = mode
+        self._set_service_mode()
+        return self.service_mode
+
+    def _set_service_mode(self):
+        service_mode = SetMessage(obj_id=SERVICE_MODE_ENABLE, data=self.service_mode, dtype=DTYPE_BOOL)
+        head_service_mode = SetMessage(obj_id=SET_SERVICE_MODE, data=service_mode, dtype=DTYPE_CONTAINER)
+        head_set_service_mode = SetMessage(obj_id=SERVICE_MODE, data=head_service_mode, dtype=DTYPE_CONTAINER)
+
+        rm = ResponseMessage(obj_id=SERVICE_MODE, data=self.write_and_read(head_set_service_mode))
+        self.service_mode = rm.parse_data()[0]
+
 
 if __name__ == '__main__':
     with Detector() as x:
+        x.set_service_mode(0)
         x.get_service_mode()
         x.get_device_iden()
         print(x.device_iden_name.decode('UTF-8'))
