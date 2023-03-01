@@ -14,6 +14,8 @@ from serial.tools.list_ports import comports
 
 from crc import Configuration, Calculator
 
+# sudo chmod a+rw /dev/ttyUSB0 -> using of the USB ports (USBx with 0-3)
+
 # data types
 DTYPE_CONTAINER = 0
 DTYPE_CSTR = 1
@@ -99,8 +101,8 @@ class TemplateMessage:
     """
     Template class TemplateMessage
     """
-    def __init__(self, obj_id: int, data: bytes = ''):
 
+    def __init__(self, obj_id: int, data: bytes = ''):
         # unique object number
         self.obj_id = obj_id
 
@@ -210,6 +212,7 @@ class ResponseMessage(TemplateMessage):
         elif dtype == DTYPE_BOOL:
             pass
         return data
+
     @staticmethod
     def parse_container(container):
 
@@ -222,18 +225,17 @@ class ResponseMessage(TemplateMessage):
 
         while n != len(container):
             tmp = int(container[dlen_start:dlen_stop], base=16)
-            obj_id.append(container[dlen_start-4:dlen_start])
+            obj_id.append(container[dlen_start - 4:dlen_start])
             data.append(container[dlen_stop:dlen_stop + tmp * 2 - 8])
 
             n += tmp * 2
-            dlen_start += tmp*2
+            dlen_start += tmp * 2
             dlen_stop = dlen_start + 4
 
         return data
 
 
 class Detector:
-
     DRIVER_NAME = 'FTDI'
 
     def __init__(self, port_name='auto'):
@@ -284,20 +286,20 @@ class Detector:
         self.smarttec_config_no_mem_compatible = None
 
         # smarttec monitor
-        self.smarttec_moitor_sup_on = None
-        self.smarttec_moitor_i_sup_plus = None
-        self.smarttec_moitor_i_sup_minus = None
-        self.smarttec_moitor_fan_on = None
-        self.smarttec_moitor_i_fan_plus = None
-        self.smarttec_moitor_i_tec = None
-        self.smarttec_moitor_u_tec = None
-        self.smarttec_moitor_u_sup_plus = None
-        self.smarttec_moitor_u_sup_minus = None
-        self.smarttec_moitor_t_det = None
-        self.smarttec_moitor_t_int = None
-        self.smarttec_moitor_pwm = None
-        self.smarttec_moitor_status = None
-        self.smarttec_moitor_module_type = None
+        self.smarttec_monitor_sup_on = None
+        self.smarttec_monitor_i_sup_plus = None
+        self.smarttec_monitor_i_sup_minus = None
+        self.smarttec_monitor_fan_on = None
+        self.smarttec_monitor_i_fan_plus = None
+        self.smarttec_monitor_i_tec = None
+        self.smarttec_monitor_u_tec = None
+        self.smarttec_monitor_u_sup_plus = None
+        self.smarttec_monitor_u_sup_minus = None
+        self.smarttec_monitor_t_det = None
+        self.smarttec_monitor_t_int = None
+        self.smarttec_monitor_pwm = None
+        self.smarttec_monitor_status = None
+        self.smarttec_monitor_module_type = None
         self.monitor_th_adc = None
 
         # module iden
@@ -314,6 +316,7 @@ class Detector:
         self.module_iden_tec_param2 = None
         self.module_iden_tec_param3 = None
         self.module_iden_tec_param4 = None
+        self.module_iden_th_type = None
         self.module_iden_th_param1 = None
         self.module_iden_th_param2 = None
         self.module_iden_th_param3 = None
@@ -325,8 +328,8 @@ class Detector:
 
         # module basic params
         self.module_basic_params_sup_ctrl = None
-        self.module_basic_params_sup_plus = None
-        self.module_basic_params_sup_minus = None
+        self.module_basic_params_u_sup_plus = None
+        self.module_basic_params_u_sup_minus = None
         self.module_basic_params_fan_ctrl = None
         self.module_basic_params_tec_ctrl = None
         self.module_basic_params_pwm = None
@@ -437,10 +440,152 @@ class Detector:
         self.device_iden_type, self.device_iden_firm_ver, self.device_iden_hard_ver, self.device_iden_name, \
             self.device_iden_serial, self.device_iden_prod_date = rm.parse_data()
 
+    def get_smarttec_config(self):
+        obj = QueryMessage(obj_id=GET_SMARTTEC_CONFIG)
+        rm = ResponseMessage(obj_id=SMARTTEC_CONFIG, data=self.write_and_read(obj))
+
+        self.smarttec_config_variant, self.smarttec_config_no_mem_compatible = rm.parse_data()
+
+    def get_smarttec_monitor(self):
+        obj = QueryMessage(obj_id=GET_SMARTTEC_MONITOR)
+        rm = ResponseMessage(obj_id=SMARTTEC_MONITOR, data=self.write_and_read(obj))
+
+        self.smarttec_monitor_sup_on, self.smarttec_monitor_i_sup_plus, self.smarttec_monitor_u_sup_minus, \
+            self.smarttec_monitor_fan_on, self.smarttec_monitor_i_fan_plus, self.smarttec_monitor_i_tec, \
+            self.smarttec_monitor_u_tec, self.smarttec_monitor_u_sup_plus, self.smarttec_monitor_u_sup_minus, \
+            self.smarttec_monitor_t_det, self.smarttec_monitor_t_int, self.smarttec_monitor_pwm,\
+            self.smarttec_monitor_status, self.smarttec_monitor_module_type = rm.parse_data()
+
+    def get_smarttec_mod(self):
+        obj = QueryMessage(obj_id=MODULE_IDEN)
+        rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(obj))
+
+        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name,\
+            self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial,\
+            self.module_iden_prod_date, self.module_iden_tec_type, self.module_iden_th_type, self.module_iden_tec_param1, \
+            self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4,\
+            self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3,\
+            self.module_iden_th_param4, self.module_iden_cool_time = rm.parse_data()
+
+    def get_smarttec_mod_no_mem_default(self):
+        obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
+
+        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+
+    def get_smarttec_mod_no_mem_user_set(self):
+        obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
+
+        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+
+    def get_smarttec_mod_no_mem_user_min(self):
+        obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
+
+        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+
+    def get_smarttec_mod_no_mem_user_max(self):
+        obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
+
+        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+
+    def get_module_iden(self):
+        obj = QueryMessage(obj_id=MODULE_IDEN)
+        rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(obj))
+
+        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name,\
+            self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, self.module_iden_prod_date,\
+            self.module_iden_tec_type, self.module_iden_th_type, self.module_iden_tec_param1, \
+            self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4,\
+            self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3,\
+            self.module_iden_th_param4, self.module_iden_cool_time = rm.parse_data()
+
+    def get_module_default(self):
+        obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
+
+        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+
+    def get_module_user_set(self):
+        obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
+
+        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+
+    def get_module_user_min(self):
+        obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
+
+        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+
+    def get_module_user_max(self):
+        obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
+
+        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+
+    def get_module_smipdc_monitor(self):
+        obj = QueryMessage(obj_id=MODULE_SMIPDC_MONITOR)
+        rm = ResponseMessage(obj_id=MODULE_SMIPDC_MONITOR, data=self.write_and_read(obj))
+
+        self.module_smipdc_monitor_sup_plus, self.module_smipdc_monitor_sup_minus, self.module_smipdc_monitor_fan_plus, \
+            self.module_smipdc_monitor_tec_plus, self.module_smipdc_monitor_tec_minus, self.module_smipdc_monitor_th1, \
+            self.module_smipdc_monitor_th2, self.module_smipdc_monitor_u_det, self.module_smipdc_monitor_u_1st, \
+            self.module_smipdc_monitor_u_out, self.module_smipdc_monitor_temp = rm.parse_data()
+
+    def get_module_smipdc_default(self):
+        obj = QueryMessage(obj_id=MODULE_SMIPDC_PARAMS)
+        rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
+
+        self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+            self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+            self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+
+    def get_module_smipdc_user_set(self):
+        obj = QueryMessage(obj_id=MODULE_SMIPDC_PARAMS)
+        rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
+
+        self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+            self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+            self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+
+    def get_module_smipdc_user_min(self):
+        obj = QueryMessage(obj_id=MODULE_SMIPDC_PARAMS)
+        rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
+
+        self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+            self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+            self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+
+    def get_module_smipdc_user_max(self):
+        obj = QueryMessage(obj_id=MODULE_SMIPDC_PARAMS)
+        rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
+
+        self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+            self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+            self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+
 
 if __name__ == '__main__':
     with Detector() as x:
         x.get_service_mode()
         x.get_device_iden()
         print(x.device_iden_name.decode('UTF-8'))
-
