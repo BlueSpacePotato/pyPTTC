@@ -136,15 +136,16 @@ class TemplateMessage:
         return self.int_to_bytes(self.crc_calculator.checksum(bytes.fromhex(data)))
 
     @staticmethod
-    def int_to_bytes(n: int) -> str:
+    def int_to_bytes(n: int, n_fill: int = 4) -> str:
         """
         Build a hex style byte string from an int value.
         A byte contains always 2 chars. So if the number is uneven it adds leading zeros.
 
         :param n:
+        :param n_fill:
         :return:
         """
-        return hex(n)[2:].zfill(4)
+        return hex(n)[2:].zfill(n_fill).upper()
 
     def get_dlen(self):
         pass
@@ -165,7 +166,7 @@ class SetMessage(TemplateMessage):
     SetMessages includes commands with `set` prefix and requires arguments
     """
 
-    def __init__(self, obj_id: int, dtype: int, data: bytes = ''):
+    def __init__(self, obj_id: int, dtype: int, data: bytes | TemplateMessage = ''):
         # unique object number
         self.obj_id = obj_id
 
@@ -186,7 +187,9 @@ class SetMessage(TemplateMessage):
         )
 
         self.crc_calculator = Calculator(crc_16)
+
     def get_dlen(self):
+        l = 0
         if self.dtype == DTYPE_CONTAINER:
             l = 4 + self.data.dlen
         elif self.dtype == DTYPE_CSTR:
@@ -218,7 +221,7 @@ class SetMessage(TemplateMessage):
             self.data = self.data.get_field_data(is_container=True)
             data = self.int_to_bytes(self.obj_id) + self.int_to_bytes(self.dlen) + self.data
         else:
-            data = self.int_to_bytes(self.obj_id) + self.int_to_bytes(self.dlen) + self.int_to_bytes(self.data)
+            data = self.int_to_bytes(self.obj_id) + self.int_to_bytes(self.dlen) + self.int_to_bytes(self.data,  (self.dlen - 4) * 2)
 
         if is_container:
             return data
@@ -226,49 +229,34 @@ class SetMessage(TemplateMessage):
         return data + self.get_crc(data)
 
 
-
 class ResponseMessage(TemplateMessage):
     """
     ResponseMessages includes object container from `device response` field
     """
 
-    def parse_data(self):
+    def is_valid(self):
+
+        if self.data == b'':
+            return False
+        if self.data[-4:] == self.get_crc(self.data[:-4]):
+            return False
+
+        return True
+
+    def parse_data(self, data=None):
         """
         pase field data to an return all values from the objects
         :return:
         """
-        data = None
 
-        # obj = int(self.data[1:5], base=16)
-        # dlen = int(self.data[5:9], base=16)
-        dtype = int(self.data[1:5], base=16) & 1028
-
+        if data is None:
+            data = self.data
+        print(data)
+        dtype = int(data[1:5], base=16) & 1028
         if dtype == DTYPE_CONTAINER:
             data = self.parse_container(self.data[9:-5])
-        elif dtype == DTYPE_CONTAINER:
-            pass
-        elif dtype == DTYPE_CSTR:
-            pass
-        elif dtype == DTYPE_INT8:
-            pass
-        elif dtype == DTYPE_UINT8:
-            pass
-        elif dtype == DTYPE_INT16:
-            pass
-        elif dtype == DTYPE_UINT16:
-            pass
-        elif dtype == DTYPE_INT32:
-            pass
-        elif dtype == DTYPE_UINT32:
-            pass
-        elif dtype == DTYPE_FLOAT:
-            pass
-        elif dtype == DTYPE_DATE_TIME:
-            pass
-        elif dtype == DTYPE_SERIAL:
-            pass
-        elif dtype == DTYPE_BOOL:
-            pass
+        else:
+            raise NotImplementedError('Answer should allways be a container?')
         return data
 
     @staticmethod
@@ -278,13 +266,34 @@ class ResponseMessage(TemplateMessage):
         dlen_start = 4
         dlen_stop = 8
 
-        obj_id = []
         data = []
 
         while n != len(container):
             tmp = int(container[dlen_start:dlen_stop], base=16)
-            obj_id.append(container[dlen_start - 4:dlen_start])
-            data.append(container[dlen_stop:dlen_stop + tmp * 2 - 8])
+            obj_id = container[dlen_start - 4:dlen_start]
+            dtype = int(obj_id[-1:], base=16)
+            print(f'obj_id: {int(obj_id, base=16)}, dtype: {int(obj_id[-1:], base=16)}')
+
+            d = container[dlen_stop:dlen_stop + tmp * 2 - 8]
+            print(d)
+            if dtype is DTYPE_BOOL:
+                data.append(bool(d))
+            elif dtype is DTYPE_INT8 or dtype is DTYPE_INT16 or DTYPE_INT32:
+                data.append(int(d, base=16))
+            elif dtype is DTYPE_FLOAT:
+                data.append(float(d))
+            elif dtype is DTYPE_DATE_TIME:
+                ms = int(d[:4], base=16)
+                s = int(d[4:6], base=16)
+                m = int(d[6:8], base=16)
+                h = int(d[8:10], base=16)
+                D = int(d[10:12], base=16)
+                M = int(d[12:14], base=16)
+                Y = int(d[14:], base=16) + 1900
+                print(ms, s, m, h, D, M, Y)
+                
+
+            #data.append(container[dlen_stop:dlen_stop + tmp * 2 - 8])
 
             n += tmp * 2
             dlen_start += tmp * 2
@@ -312,6 +321,8 @@ class Detector:
                 self._serial.port = self.find_com_port()
             except ConnectionError as ce:
                 raise IOError('Detector not found!')
+        elif port_name == 'dummy':
+            self._serial.port = port_name
         else:
             self._serial.port = port_name
 
@@ -321,6 +332,9 @@ class Detector:
         self._connection_error = False
         self._status = 1
         self._context_depth = 0
+
+        # service mode
+        self.service_mode = None
 
         # device iden container
         self.device_iden_type = None
@@ -427,7 +441,8 @@ class Detector:
         if not self._connection_error:
             try:
                 if self._context_depth == 0 and self._serial.port is not None and not self._serial.is_open:
-                    self._serial.open()
+                    if self._serial.port != 'dummy':
+                        self._serial.open()
             except ConnectionError as ex:
                 self._connection_error = True
                 raise IOError(f'detector: error entering context: {ex}')
@@ -482,166 +497,186 @@ class Detector:
             raise TypeError('Obj should be a BasicObject')
 
         mes = '$' + obj.get_field_data() + '#'
-        print(mes)
-        self._serial.write(mes.upper().encode('UTF-8'))
-        ans = self._serial.readline()
-        print(ans)
-        return ans #self._serial.readline()
+
+        self._serial.write(mes .encode('UTF-8'))
+
+        return self._serial.readline()
 
     def get_service_mode(self):
         obj = QueryMessage(obj_id=GET_SERVICE_MODE)
         rm = ResponseMessage(obj_id=SERVICE_MODE, data=self.write_and_read(obj))
-        self.device_check_value = rm.parse_data()[0]
+
+        if rm.is_valid():
+            self.service_mode = rm.parse_data()[0]
+            return self.service_mode
 
     def get_device_iden(self):
         obj = QueryMessage(obj_id=GET_DEVICE_IDEN)
         rm = ResponseMessage(obj_id=DEVICE_IDEN, data=self.write_and_read(obj))
 
-        self.device_iden_type, self.device_iden_firm_ver, self.device_iden_hard_ver, self.device_iden_name, \
-            self.device_iden_serial, self.device_iden_prod_date = rm.parse_data()
+        if rm.is_valid():
+            self.device_iden_type, self.device_iden_firm_ver, self.device_iden_hard_ver, self.device_iden_name, \
+                self.device_iden_serial, self.device_iden_prod_date = rm.parse_data()
 
     def get_smarttec_config(self):
         obj = QueryMessage(obj_id=GET_SMARTTEC_CONFIG)
         rm = ResponseMessage(obj_id=SMARTTEC_CONFIG, data=self.write_and_read(obj))
 
-        self.smarttec_config_variant, self.smarttec_config_no_mem_compatible = rm.parse_data()
+        if rm.is_valid():
+            self.smarttec_config_variant, self.smarttec_config_no_mem_compatible = rm.parse_data()
 
     def get_smarttec_monitor(self):
         obj = QueryMessage(obj_id=GET_SMARTTEC_MONITOR)
         rm = ResponseMessage(obj_id=SMARTTEC_MONITOR, data=self.write_and_read(obj))
 
-        self.smarttec_monitor_sup_on, self.smarttec_monitor_i_sup_plus, self.smarttec_monitor_u_sup_minus, \
-            self.smarttec_monitor_fan_on, self.smarttec_monitor_i_fan_plus, self.smarttec_monitor_i_tec, \
-            self.smarttec_monitor_u_tec, self.smarttec_monitor_u_sup_plus, self.smarttec_monitor_u_sup_minus, \
-            self.smarttec_monitor_t_det, self.smarttec_monitor_t_int, self.smarttec_monitor_pwm, \
-            self.smarttec_monitor_status, self.smarttec_monitor_module_type = rm.parse_data()
+        if rm.is_valid():
+            self.smarttec_monitor_sup_on, self.smarttec_monitor_i_sup_plus, self.smarttec_monitor_u_sup_minus, \
+                self.smarttec_monitor_fan_on, self.smarttec_monitor_i_fan_plus, self.smarttec_monitor_i_tec, \
+                self.smarttec_monitor_u_tec, self.smarttec_monitor_u_sup_plus, self.smarttec_monitor_u_sup_minus, \
+                self.smarttec_monitor_t_det, self.smarttec_monitor_t_int, self.smarttec_monitor_pwm, \
+                self.smarttec_monitor_status, self.smarttec_monitor_module_type = rm.parse_data()
 
     def get_smarttec_mod(self):
         obj = QueryMessage(obj_id=MODULE_IDEN)
         rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(obj))
 
-        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
-            self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, \
-            self.module_iden_prod_date, self.module_iden_tec_type, self.module_iden_th_type, self.module_iden_tec_param1, \
-            self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4, \
-            self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3, \
-            self.module_iden_th_param4, self.module_iden_cool_time = rm.parse_data()
+        if rm.is_valid():
+            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+                self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, \
+                self.module_iden_prod_date, self.module_iden_tec_type, self.module_iden_th_type, self.module_iden_tec_param1, \
+                self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4, \
+                self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3, \
+                self.module_iden_th_param4, self.module_iden_cool_time = rm.parse_data()
 
     def get_smarttec_mod_no_mem_default(self):
         obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
 
-        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
 
     def get_smarttec_mod_no_mem_user_set(self):
         obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
 
-        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
 
     def get_smarttec_mod_no_mem_user_min(self):
         obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
 
-        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
 
     def get_smarttec_mod_no_mem_user_max(self):
         obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
 
-        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
 
     def get_module_iden(self):
         obj = QueryMessage(obj_id=MODULE_IDEN)
         rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(obj))
 
-        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
-            self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, self.module_iden_prod_date, \
-            self.module_iden_tec_type, self.module_iden_th_type, self.module_iden_tec_param1, \
-            self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4, \
-            self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3, \
-            self.module_iden_th_param4, self.module_iden_cool_time = rm.parse_data()
+        if rm.is_valid():
+            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+                self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, self.module_iden_prod_date, \
+                self.module_iden_tec_type, self.module_iden_th_type, self.module_iden_tec_param1, \
+                self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4, \
+                self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3, \
+                self.module_iden_th_param4, self.module_iden_cool_time = rm.parse_data()
 
     def get_module_default(self):
         obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
 
-        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
 
     def get_module_user_set(self):
         obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
 
-        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
 
     def get_module_user_min(self):
         obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
 
-        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
 
     def get_module_user_max(self):
         obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
 
-        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
 
     def get_module_smipdc_monitor(self):
         obj = QueryMessage(obj_id=MODULE_SMIPDC_MONITOR)
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_MONITOR, data=self.write_and_read(obj))
 
-        self.module_smipdc_monitor_sup_plus, self.module_smipdc_monitor_sup_minus, self.module_smipdc_monitor_fan_plus, \
-            self.module_smipdc_monitor_tec_plus, self.module_smipdc_monitor_tec_minus, self.module_smipdc_monitor_th1, \
-            self.module_smipdc_monitor_th2, self.module_smipdc_monitor_u_det, self.module_smipdc_monitor_u_1st, \
-            self.module_smipdc_monitor_u_out, self.module_smipdc_monitor_temp = rm.parse_data()
+        if rm.is_valid():
+            self.module_smipdc_monitor_sup_plus, self.module_smipdc_monitor_sup_minus, self.module_smipdc_monitor_fan_plus, \
+                self.module_smipdc_monitor_tec_plus, self.module_smipdc_monitor_tec_minus, self.module_smipdc_monitor_th1, \
+                self.module_smipdc_monitor_th2, self.module_smipdc_monitor_u_det, self.module_smipdc_monitor_u_1st, \
+                self.module_smipdc_monitor_u_out, self.module_smipdc_monitor_temp = rm.parse_data()
 
     def get_module_smipdc_default(self):
         obj = QueryMessage(obj_id=MODULE_SMIPDC_PARAMS)
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
 
-        self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
-            self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
-            self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        if rm.is_valid():
+            self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+                self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+                self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
 
     def get_module_smipdc_user_set(self):
         obj = QueryMessage(obj_id=MODULE_SMIPDC_PARAMS)
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
 
-        self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
-            self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
-            self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        if rm.is_valid():
+            self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+                self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+                self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
 
     def get_module_smipdc_user_min(self):
         obj = QueryMessage(obj_id=MODULE_SMIPDC_PARAMS)
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
 
-        self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
-            self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
-            self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        if rm.is_valid():
+            self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+                self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+                self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
 
     def get_module_smipdc_user_max(self):
         obj = QueryMessage(obj_id=MODULE_SMIPDC_PARAMS)
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
 
-        self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
-            self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
-            self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        if rm.is_valid():
+            self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+                self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+                self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
 
     def set_service_mode(self, mode: int):
         self.service_mode = mode
@@ -650,16 +685,11 @@ class Detector:
 
     def _set_service_mode(self):
         service_mode = SetMessage(obj_id=SERVICE_MODE_ENABLE, data=self.service_mode, dtype=DTYPE_BOOL)
-        head_service_mode = SetMessage(obj_id=SET_SERVICE_MODE, data=service_mode, dtype=DTYPE_CONTAINER)
-        head_set_service_mode = SetMessage(obj_id=SERVICE_MODE, data=head_service_mode, dtype=DTYPE_CONTAINER)
+        head_service_mode = SetMessage(obj_id=SERVICE_MODE, data=service_mode, dtype=DTYPE_CONTAINER)
+        head_set_service_mode = SetMessage(obj_id=SET_SERVICE_MODE, data=head_service_mode, dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=SERVICE_MODE, data=self.write_and_read(head_set_service_mode))
-        self.service_mode = rm.parse_data()[0]
+        if rm.is_valid():
+            self.service_mode = int(rm.parse_data()[0])
 
 
-if __name__ == '__main__':
-    with Detector() as x:
-        x.set_service_mode(0)
-        x.get_service_mode()
-        x.get_device_iden()
-        print(x.device_iden_name.decode('UTF-8'))
