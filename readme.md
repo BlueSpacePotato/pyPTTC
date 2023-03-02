@@ -67,3 +67,8 @@ size of object = (`obj_id` + `dlen` + size of `Data`) = (2 Byte + 2 Byte + size 
 
 # Known Issues
 If the detector is connected to the USB port but not to the power supply, the FDTI chip is found and the serial port opens without error. But when you send data to the port, you get no response.
+
+If you get an Port-Permission-denied-error on linux trying to open the port, you could try: 
+```
+chmod a+rw /dev/ttyUSBx 
+```

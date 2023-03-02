@@ -8,13 +8,13 @@ import threading
 import sys
 import logging
 import traceback
+import struct
 from decimal import Decimal
 
 from serial.tools.list_ports import comports
 
 from crc import Configuration, Calculator
 
-# sudo chmod a+rw /dev/ttyUSB0 -> using of the USB ports (USBx with 0-3)
 
 # data types
 DTYPE_CONTAINER = 0
@@ -95,6 +95,31 @@ MODULE_SMIPDC_PARAMS = 12288
 
 # object list - base objects
 SERVICE_MODE_ENABLE = 4123
+
+TRANSPARENT_MODE_ENABLE = 5147
+
+SMARTTEC_CONFIG_VARIANT = 6163
+SMARTTEC_CONFIG_NO_MEM_COMPATIBLE = 6187
+
+MODULE_IDEN_TYPE = 8211
+MODULE_IDEN_FIRM_VER = 8229
+MODULE_IDEN_HARD_VER = 8245
+MODULE_IDEN_NAME = 8257
+MODULE_IDEN_SERIAL = 8282
+MODULE_IDEN_DET_NAME = 8289
+MODULE_IDEN_DET_SERIAL = 8314
+MODULE_IDEN_PROD_DATE = 8329
+MODULE_IDEN_TEC_TYPE = 8339
+MODULE_IDEN_TH_TYPE = 8355
+MODULE_IDEN_TEC_PARAM1 = 8376
+MODULE_IDEN_TEC_PARAM2 = 8392
+MODULE_IDEN_TEC_PARAM3 = 8408
+MODULE_IDEN_TEC_PARAM4 = 8424
+MODULE_IDEN_TH_PARAM1 = 8440
+MODULE_IDEN_TH_PARAM2 = 8456
+MODULE_IDEN_TH_PARAM3 = 8472
+MODULE_IDEN_TH_PARAM4 = 8488
+MODULE_IDEN_COOL_TIME = 8581
 
 
 class TemplateMessage:
@@ -221,7 +246,8 @@ class SetMessage(TemplateMessage):
             self.data = self.data.get_field_data(is_container=True)
             data = self.int_to_bytes(self.obj_id) + self.int_to_bytes(self.dlen) + self.data
         else:
-            data = self.int_to_bytes(self.obj_id) + self.int_to_bytes(self.dlen) + self.int_to_bytes(self.data,  (self.dlen - 4) * 2)
+            data = self.int_to_bytes(self.obj_id) + self.int_to_bytes(self.dlen) + self.int_to_bytes(self.data, (
+                        self.dlen - 4) * 2)
 
         if is_container:
             return data
@@ -238,9 +264,6 @@ class ResponseMessage(TemplateMessage):
 
         if self.data == b'':
             return False
-        if self.data[-4:] == self.get_crc(self.data[:-4]):
-            return False
-
         return True
 
     def parse_data(self, data=None):
@@ -278,11 +301,11 @@ class ResponseMessage(TemplateMessage):
             print(d)
             if dtype is DTYPE_BOOL:
                 data.append(bool(d))
-            elif dtype is DTYPE_INT8 or dtype is DTYPE_INT16 or DTYPE_INT32:
+            elif dtype == DTYPE_INT8 or dtype == DTYPE_INT16 or dtype == DTYPE_INT32:
                 data.append(int(d, base=16))
-            elif dtype is DTYPE_FLOAT:
-                data.append(float(d))
-            elif dtype is DTYPE_DATE_TIME:
+            elif dtype == DTYPE_FLOAT:
+                data.append(float.fromhex(d.decode('utf-8')))
+            elif dtype == DTYPE_DATE_TIME:
                 ms = int(d[:4], base=16)
                 s = int(d[4:6], base=16)
                 m = int(d[6:8], base=16)
@@ -290,10 +313,14 @@ class ResponseMessage(TemplateMessage):
                 D = int(d[10:12], base=16)
                 M = int(d[12:14], base=16)
                 Y = int(d[14:], base=16) + 1900
-                print(ms, s, m, h, D, M, Y)
-                
+                data.append({'ms': ms, 's': s, 'm': m, 'h': h, 'D': D, 'M': M, 'Y': Y})
+            elif dtype == DTYPE_CSTR:
+                print("SDFGHJK")
+                print(str(d))
+                data.append(str(d))
+                print(str(d))
 
-            #data.append(container[dlen_stop:dlen_stop + tmp * 2 - 8])
+            # data.append(container[dlen_stop:dlen_stop + tmp * 2 - 8])
 
             n += tmp * 2
             dlen_start += tmp * 2
@@ -352,6 +379,7 @@ class Detector:
 
         # transparent mode
         self.transparent_mode_enabled = None
+        self.transparent_mode = None
 
         # smarttec config
         self.smarttec_config_variant = None
@@ -497,8 +525,8 @@ class Detector:
             raise TypeError('Obj should be a BasicObject')
 
         mes = '$' + obj.get_field_data() + '#'
-
-        self._serial.write(mes .encode('UTF-8'))
+        print(mes)
+        self._serial.write(mes.encode('UTF-8'))
 
         return self._serial.readline()
 
@@ -536,8 +564,8 @@ class Detector:
                 self.smarttec_monitor_t_det, self.smarttec_monitor_t_int, self.smarttec_monitor_pwm, \
                 self.smarttec_monitor_status, self.smarttec_monitor_module_type = rm.parse_data()
 
-    def get_smarttec_mod(self):
-        obj = QueryMessage(obj_id=MODULE_IDEN)
+    def get_smarttec_mod_no_mem_iden(self):
+        obj = QueryMessage(obj_id=GET_SMARTTEC_MOD_NO_MEM_IDEN)
         rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(obj))
 
         if rm.is_valid():
@@ -687,9 +715,217 @@ class Detector:
         service_mode = SetMessage(obj_id=SERVICE_MODE_ENABLE, data=self.service_mode, dtype=DTYPE_BOOL)
         head_service_mode = SetMessage(obj_id=SERVICE_MODE, data=service_mode, dtype=DTYPE_CONTAINER)
         head_set_service_mode = SetMessage(obj_id=SET_SERVICE_MODE, data=head_service_mode, dtype=DTYPE_CONTAINER)
+        # working sets from "inside" to "outside"
+        # service_mode contains bool-type true = 1 = enable, false = 0 = disable
+        # head_service_mode contains set "service_mode" -> is container
+        # head_set_service_mode contains "head_service_mode", that contains "service_mode" -> is container
 
         rm = ResponseMessage(obj_id=SERVICE_MODE, data=self.write_and_read(head_set_service_mode))
         if rm.is_valid():
             self.service_mode = int(rm.parse_data()[0])
 
+    def set_transparent_mode(self, mode: int):
+        # mode -> 0(disable) || 1(enable) für enable, disable
+        self.transparent_mode = mode
+        self._set_transparent_mode()
+        return self.transparent_mode
+
+    def _set_transparent_mode(self):
+        # packages
+        transparent_mode = SetMessage(obj_id=TRANSPARENT_MODE_ENABLE, data=self.transparent_mode, dtype=DTYPE_BOOL)
+        head_transparent_mode = SetMessage(obj_id=TRANSPARENT_MODE, data=transparent_mode, dtype=DTYPE_CONTAINER)
+        head_set_transparent_mode = SetMessage(obj_id=SET_TRANSPARENT_MODE, data=head_transparent_mode,
+                                               dtype=DTYPE_CONTAINER)
+
+        rm = ResponseMessage(obj_id=SERVICE_MODE, data=self.write_and_read(head_set_transparent_mode))
+        if rm.is_valid():
+            self.transparent_mode = int(rm.parse_data()[0])
+
+    def set_smarttec_config_variant(self, variant: int):
+        # variant -> val = 0-2 (0= Basic, 1 = OEM, 2 = Advanced)
+        if 0 >= variant <= 2:
+            self.smarttec_config_variant = variant
+            self._set_smarttec_config()
+            return self.smarttec_config_variant
+
+    def set_smarttec_config_no_mem_compatible(self, no_mem_com: int):
+        # no_mem_com -> val = 0 || 1 (0 = false = no EEPROM, 1 = true = EEPROM)
+        self.smarttec_config_no_mem_compatible = no_mem_com
+        self._set_smarttec_config()
+        return self.smarttec_config_no_mem_compatible
+
+    def _set_smarttec_config(self):
+        # packages
+        smarttec_config_variant = SetMessage(obj_id=SMARTTEC_CONFIG_VARIANT, data=self.smarttec_config_variant,
+                                             dtype=DTYPE_UINT8)
+        smarttec_config_no_mem_com = SetMessage(obj_id=SMARTTEC_CONFIG_NO_MEM_COMPATIBLE,
+                                                data=self.smarttec_config_no_mem_compatible, dtype=DTYPE_BOOL)
+        into_container = bytes(str(smarttec_config_no_mem_com) + str(smarttec_config_variant))
+        # connect the two values for container 2 data (sry)
+        # what to do if there's only one of the two -> default value? but what
+
+        container2 = SetMessage(obj_id=SMARTTEC_CONFIG, data=into_container, dtype=DTYPE_CONTAINER)
+        container1 = SetMessage(obj_id=SET_SMARTTEC_CONFIG, data=container2, dtype=DTYPE_CONTAINER)
+
+        rm = ResponseMessage(obj_id=SMARTTEC_CONFIG, data=self.write_and_read(container1))
+
+    def set_smarttec_mod_no_mem_iden_type(self, iden_type: int):
+        # type -> types of memory 0-3 (0 = None, 1 = NoMem, 2 = Wire, 3 = SIMPDC)
+        self.module_iden_type = iden_type
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_type
+
+    def set_smarttec_mod_no_mem_iden_firm_ver(self, firm_ver: int):
+        # version of firmware
+        self.module_iden_firm_ver = firm_ver
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_firm_ver
+
+    def set_smarttec_mod_no_mem_iden_hard_ver(self, hard_ver: int):
+        # version of hardware
+        self.module_iden_hard_ver = hard_ver
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_hard_ver
+
+    def set_smarttec_mod_no_mem_iden_name(self, name: str):
+        # module name
+        self.module_iden_name = name
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_name
+
+    def set_smarttec_mod_no_mem_iden_serial(self, iden_serial: DTYPE_SERIAL):
+        # module serial number
+        self.module_iden_serial = iden_serial
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_serial
+
+    def set_smarttec_mod_no_mem_iden_det_name(self, det_name: str):
+        # detector name
+        self.module_iden_det_name = det_name
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_det_name
+
+    def set_smarttec_mod_no_mem_iden_det_serial(self, det_serial: DTYPE_SERIAL):
+        # detector serial number
+        self.module_iden_det_serial = det_serial
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_det_serial
+
+    def set_smarttec_mod_no_mem_iden_prod_date(self, prod_date: DTYPE_DATE_TIME):
+        # date of manufacture of module
+        self.module_iden_prod_date = prod_date
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_prod_date
+
+    def set_smarttec_mod_no_mem_iden_tec_type(self, tec_type: int):
+        # var range 0-3 (0 = None, 1 = Nomem, 2 = Wire, 3 = SIMPDC)
+        self.module_iden_tec_type = tec_type
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_tec_type
+
+    def set_smarttec_mod_no_mem_iden_th_type(self, th_type: int):
+        # describes thermistor type
+        self.module_iden_th_type = th_type
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_th_type
+
+    def set_smarttec_mod_no_mem_iden_tec_param1(self, param1: float):
+        self.module_iden_tec_param1 = param1
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_tec_param1
+
+    def set_smarttec_mod_no_mem_iden_tec_param2(self, param2: float):
+        self.module_iden_tec_param2 = param2
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_tec_param2
+
+    def set_smarttec_mod_no_mem_iden_tec_param3(self, param3: float):
+        self.module_iden_tec_param3 = param3
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_tec_param3
+
+    def set_smarttec_mod_no_mem_iden_tec_param4(self, param4: float):
+        self.module_iden_tec_param4 = param4
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_tec_param4
+
+    def set_smarttec_mod_no_mem_iden_th_param1(self, th_param1: float):
+        self.module_iden_th_param1 = th_param1
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_th_param1
+
+    def set_smarttec_mod_no_mem_iden_th_param2(self, th_param2: float):
+        self.module_iden_th_param2 = th_param2
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_th_param2
+
+    def set_smarttec_mod_no_mem_iden_th_param3(self, th_param3: float):
+        self.module_iden_th_param3 = th_param3
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_th_param3
+
+    def set_smarttec_mod_no_mem_iden_th_param4(self, th_param4: float):
+        self.module_iden_th_param4 = th_param4
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_th_param4
+
+    def set_smarttec_mod_no_mem_iden_cool_time(self, time: int):
+        # setting max time for cooling module
+        self.module_iden_cool_time = time
+        self._set_smarttec_mod_no_mem_iden()
+        return self.module_iden_cool_time
+
+    def _set_smarttec_mod_no_mem_iden(self):
+        # packages
+        iden_type = SetMessage(obj_id=MODULE_IDEN_TYPE, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver = SetMessage(obj_id=MODULE_IDEN_FIRM_VER, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
+        hard_ver = SetMessage(obj_id=MODULE_IDEN_HARD_VER, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
+        name = SetMessage(obj_id=MODULE_IDEN_NAME, data=self.module_iden_name, dtype=DTYPE_CSTR)
+        iden_serial = SetMessage(obj_id=MODULE_IDEN_SERIAL, data=self.module_iden_serial, dtype=DTYPE_SERIAL)
+        # 5
+        det_name = SetMessage(obj_id=MODULE_IDEN_DET_NAME, data=self.module_iden_det_name, dtype=DTYPE_CSTR)
+        det_serial = SetMessage(obj_id=MODULE_IDEN_DET_SERIAL, data=self.module_iden_det_serial, dtype=DTYPE_SERIAL)
+        prod_date = SetMessage(obj_id=MODULE_IDEN_PROD_DATE, data=self.module_iden_prod_date, dtype=DTYPE_DATE_TIME)
+        tec_type = SetMessage(obj_id=MODULE_IDEN_TEC_TYPE, data=self.module_iden_tec_type, dtype=DTYPE_UINT8)
+        th_type = SetMessage(obj_id=MODULE_IDEN_TH_TYPE, data=self.module_iden_th_type, dtype=DTYPE_UINT8)
+        # 10
+        tec_param1 = SetMessage(obj_id=MODULE_IDEN_TEC_PARAM1, data=self.module_iden_tec_param1, dtype=DTYPE_FLOAT)
+        tec_param2 = SetMessage(obj_id=MODULE_IDEN_TEC_PARAM2, data=self.module_iden_tec_param2, dtype=DTYPE_FLOAT)
+        tec_param3 = SetMessage(obj_id=MODULE_IDEN_TEC_PARAM3, data=self.module_iden_tec_param3, dtype=DTYPE_FLOAT)
+        tec_param4 = SetMessage(obj_id=MODULE_IDEN_TEC_PARAM4, data=self.module_iden_tec_param4, dtype=DTYPE_FLOAT)
+        th_param1 = SetMessage(obj_id=MODULE_IDEN_TH_PARAM1, data=self.module_iden_th_param1, dtype=DTYPE_FLOAT)
+        # 15
+        th_param2 = SetMessage(obj_id=MODULE_IDEN_TH_PARAM2, data=self.module_iden_th_param2, dtype=DTYPE_FLOAT)
+        th_param3 = SetMessage(obj_id=MODULE_IDEN_TH_PARAM3, data=self.module_iden_th_param3, dtype=DTYPE_FLOAT)
+        th_param4 = SetMessage(obj_id=MODULE_IDEN_TH_PARAM4, data=self.module_iden_th_param4, dtype=DTYPE_FLOAT)
+        cool_time = SetMessage(obj_id=MODULE_IDEN_COOL_TIME, data=self.module_iden_cool_time, dtype=DTYPE_UINT16)
+
+        container2 = SetMessage(
+            obj_id=MODULE_IDEN,
+            dtype=DTYPE_CONTAINER,
+            data= (
+                iden_type,
+                firm_ver,
+                hard_ver,
+                name,
+                iden_serial,
+                det_name,
+                det_serial,
+                prod_date,
+                tec_type,
+                th_type,
+                tec_param1,
+                tec_param2,
+                tec_param3,
+                tec_param4,
+                th_param1,
+                th_param2,
+                th_param3,
+                th_param4,
+                cool_time
+            )
+        )
+        container1 = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_IDEN, data=container2, dtype=DTYPE_CONTAINER)
+
+        rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(container1))
 
