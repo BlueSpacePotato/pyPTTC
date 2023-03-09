@@ -3,18 +3,12 @@
 """
 
 import serial
-import signal
-import threading
-import sys
 import logging
 import traceback
-import struct
-from decimal import Decimal
 
 from serial.tools.list_ports import comports
 
 from crc import Configuration, Calculator
-
 
 # data types
 DTYPE_CONTAINER = 0
@@ -121,18 +115,30 @@ MODULE_IDEN_TH_PARAM3 = 8472
 MODULE_IDEN_TH_PARAM4 = 8488
 MODULE_IDEN_COOL_TIME = 8581
 
+# no_mem_default -> hex to dec
+NO_MEM_DEFAULT_MODULE_IDEN_TYPE_1 = 9235  # hex: 2413
+NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_1 = 9252  # hex: 2424
+NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_1 = 9268  # hex: 2434
+NO_MEM_DEFAULT_MODULE_IDEN_NAME_1 = 9283  # hex: 2443
+NO_MEM_DEFAULT_MODULE_IDEN_TYPE_2 = 9299  # 2453
+NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_2 = 9317  # 2465
+NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_2 = 9332  # 2474
+NO_MEM_DEFAULT_MODULE_IDEN_NAME_2 = 9351  # 2487
+NO_MEM_DEFAULT_MODULE_IDEN = 9216  # 2400
+NO_MEM_DEFAULT_SET_SMARTTEC_MOD_NO_MEM_IDEN = 1584  # 630
+
 
 class TemplateMessage:
     """
     Template class TemplateMessage
     """
 
-    def __init__(self, obj_id: int, data: bytes = ''):
+    def __init__(self, obj_id: int, data: bytes | tuple = None):
         # unique object number
         self.obj_id = obj_id
 
         # basic data - only 1 package
-        self.data = data
+        self.data = '' if data is None else data
 
         self.dlen = self.get_dlen()
 
@@ -147,7 +153,7 @@ class TemplateMessage:
 
         self.crc_calculator = Calculator(crc_16)
 
-    def get_field_data(self) -> str:
+    def get_field_data(self,  **kwargs) -> str:
         data = self.int_to_bytes(self.obj_id) + self.int_to_bytes(self.dlen) + self.data
         return data + self.get_crc(data)
 
@@ -173,7 +179,7 @@ class TemplateMessage:
         return hex(n)[2:].zfill(n_fill).upper()
 
     def get_dlen(self):
-        pass
+        return None
 
 
 class QueryMessage(TemplateMessage):
@@ -181,8 +187,7 @@ class QueryMessage(TemplateMessage):
     QueryMessages includes commands with `get` prefix
     """
 
-    @staticmethod
-    def get_dlen():
+    def get_dlen(self):
         return 4
 
 
@@ -191,12 +196,19 @@ class SetMessage(TemplateMessage):
     SetMessages includes commands with `set` prefix and requires arguments
     """
 
-    def __init__(self, obj_id: int, dtype: int, data: bytes | TemplateMessage = ''):
+    def __init__(self, obj_id: int, dtype: int, data: bytes | tuple | TemplateMessage = ''):
+        super().__init__(obj_id=obj_id)
         # unique object number
         self.obj_id = obj_id
-
-        # basic data - only 1 package
-        self.data = data
+        print(self.obj_id)
+        if isinstance(data, tuple):
+            self.data = b''
+            for d in data:
+                print('objid:', d.obj_id)
+                self.data += d.get_field_data()
+            print(self.data)
+        else:
+            self.data = data
 
         self.dtype = dtype
 
@@ -214,40 +226,45 @@ class SetMessage(TemplateMessage):
         self.crc_calculator = Calculator(crc_16)
 
     def get_dlen(self):
-        l = 0
+        len_dtype = 0
         if self.dtype == DTYPE_CONTAINER:
-            l = 4 + self.data.dlen
+            len_dtype = 4 + self.data.dlen
         elif self.dtype == DTYPE_CSTR:
-            l = 4 + len(self.data)
+            print(self.data)
+            if self.data is not None:
+                print(self.data)
+                len_dtype = 4 + len(self.data)
+            else:
+                raise ValueError('data cant be None for dtype cstr')
         elif self.dtype == DTYPE_INT8:
-            l = 5
+            len_dtype = 5
         elif self.dtype == DTYPE_UINT8:
-            l = 5
+            len_dtype = 5
         elif self.dtype == DTYPE_INT16:
-            l = 6
+            len_dtype = 6
         elif self.dtype == DTYPE_UINT16:
-            l = 6
+            len_dtype = 6
         elif self.dtype == DTYPE_INT32:
-            l = 8
+            len_dtype = 8
         elif self.dtype == DTYPE_UINT32:
-            l = 8
+            len_dtype = 8
         elif self.dtype == DTYPE_FLOAT:
-            l = 8
+            len_dtype = 8
         elif self.dtype == DTYPE_DATE_TIME:
-            l = 12
+            len_dtype = 12
         elif self.dtype == DTYPE_SERIAL:
-            l = 8
+            len_dtype = 8
         elif self.dtype == DTYPE_BOOL:
-            l = 5
-        return l
+            len_dtype = 5
+        return len_dtype
 
     def get_field_data(self, is_container: bool = False) -> str:
         if self.dtype == DTYPE_CONTAINER:
             self.data = self.data.get_field_data(is_container=True)
             data = self.int_to_bytes(self.obj_id) + self.int_to_bytes(self.dlen) + self.data
         else:
-            data = self.int_to_bytes(self.obj_id) + self.int_to_bytes(self.dlen) + self.int_to_bytes(self.data, (
-                        self.dlen - 4) * 2)
+            data = self.int_to_bytes(self.obj_id) + self.int_to_bytes(self.dlen) + self.int_to_bytes(int(self.data), (
+                    self.dlen - 4) * 2)
 
         if is_container:
             return data
@@ -279,7 +296,7 @@ class ResponseMessage(TemplateMessage):
         if dtype == DTYPE_CONTAINER:
             data = self.parse_container(self.data[9:-5])
         else:
-            raise NotImplementedError('Answer should allways be a container?')
+            raise NotImplementedError('Answer should always be a container?')
         return data
 
     @staticmethod
@@ -295,11 +312,10 @@ class ResponseMessage(TemplateMessage):
             tmp = int(container[dlen_start:dlen_stop], base=16)
             obj_id = container[dlen_start - 4:dlen_start]
             dtype = int(obj_id[-1:], base=16)
-            print(f'obj_id: {int(obj_id, base=16)}, dtype: {int(obj_id[-1:], base=16)}')
 
             d = container[dlen_stop:dlen_stop + tmp * 2 - 8]
-            print(d)
-            if dtype is DTYPE_BOOL:
+            print(f'objectID: {int(obj_id, base=16)}, DTYPE: {dtype}, d: {d}')
+            if dtype == DTYPE_BOOL:
                 data.append(bool(d))
             elif dtype == DTYPE_INT8 or dtype == DTYPE_INT16 or dtype == DTYPE_INT32:
                 data.append(int(d, base=16))
@@ -315,7 +331,6 @@ class ResponseMessage(TemplateMessage):
                 Y = int(d[14:], base=16) + 1900
                 data.append({'ms': ms, 's': s, 'm': m, 'h': h, 'D': D, 'M': M, 'Y': Y})
             elif dtype == DTYPE_CSTR:
-                print("SDFGHJK")
                 print(str(d))
                 data.append(str(d))
                 print(str(d))
@@ -461,6 +476,46 @@ class Detector:
         self.module_smipdc_params_trans = None
         self.module_smipdc_params_acdc = None
         self.module_smipdc_params_bw = None
+
+        # smarttec mod no mem default
+        self.smarttec_mod_no_mem_default_module_iden_type1 = None
+        self.smarttec_mod_no_mem_default_module_iden_firm_ver1 = None
+        self.smarttec_mod_no_mem_default_module_iden_hard_ver1 = None
+        self.smarttec_mod_no_mem_default_module_iden_name1 = None
+        self.smarttec_mod_no_mem_default_module_iden_type2 = None
+        self.smarttec_mod_no_mem_default_module_iden_firm_ver2 = None
+        self.smarttec_mod_no_mem_default_module_iden_hard_ver2 = None
+        self.smarttec_mod_no_mem_default_module_iden_name2 = None
+
+        # smarttec mod no mem user set
+        self.smarttec_mod_no_mem_user_set_module_iden_type1 = None
+        self.smarttec_mod_no_mem_user_set_module_iden_firm_ver1 = None
+        self.smarttec_mod_no_mem_user_set_module_iden_hard_ver1 = None
+        self.smarttec_mod_no_mem_user_set_module_iden_name1 = None
+        self.smarttec_mod_no_mem_user_set_module_iden_type2 = None
+        self.smarttec_mod_no_mem_user_set_module_iden_firm_ver2 = None
+        self.smarttec_mod_no_mem_user_set_module_iden_hard_ver2 = None
+        self.smarttec_mod_no_mem_user_set_module_iden_name2 = None
+
+        # smarttec mod no mem user min
+        self.smarttec_mod_no_mem_user_min_module_iden_type1 = None
+        self.smarttec_mod_no_mem_user_min_module_iden_firm_ver1 = None
+        self.smarttec_mod_no_mem_user_min_module_iden_hard_ver1 = None
+        self.smarttec_mod_no_mem_user_min_module_iden_name1 = None
+        self.smarttec_mod_no_mem_user_min_module_iden_type2 = None
+        self.smarttec_mod_no_mem_user_min_module_iden_firm_ver2 = None
+        self.smarttec_mod_no_mem_user_min_module_iden_hard_ver2 = None
+        self.smarttec_mod_no_mem_user_min_module_iden_name2 = None
+
+        # smarttec mod no mem user max
+        self.smarttec_mod_no_mem_user_max_module_iden_type1 = None
+        self.smarttec_mod_no_mem_user_max_module_iden_firm_ver1 = None
+        self.smarttec_mod_no_mem_user_max_module_iden_hard_ver1 = None
+        self.smarttec_mod_no_mem_user_max_module_iden_name1 = None
+        self.smarttec_mod_no_mem_user_max_module_iden_type2 = None
+        self.smarttec_mod_no_mem_user_max_module_iden_firm_ver2 = None
+        self.smarttec_mod_no_mem_user_max_module_iden_hard_ver2 = None
+        self.smarttec_mod_no_mem_user_max_module_iden_name2 = None
 
     def __enter__(self):
         """
@@ -613,7 +668,8 @@ class Detector:
                 self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
 
     def get_module_iden(self):
-        obj = QueryMessage(obj_id=MODULE_IDEN)
+        obj = QueryMessage(obj_id=GET_MODULE_IDEN)
+
         rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(obj))
 
         if rm.is_valid():
@@ -768,6 +824,7 @@ class Detector:
         container1 = SetMessage(obj_id=SET_SMARTTEC_CONFIG, data=container2, dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=SMARTTEC_CONFIG, data=self.write_and_read(container1))
+        self.set_smarttec_config_variant, self.smarttec_config_no_mem_compatible = rm.parse_data()[0]
 
     def set_smarttec_mod_no_mem_iden_type(self, iden_type: int):
         # type -> types of memory 0-3 (0 = None, 1 = NoMem, 2 = Wire, 3 = SIMPDC)
@@ -818,7 +875,7 @@ class Detector:
         return self.module_iden_prod_date
 
     def set_smarttec_mod_no_mem_iden_tec_type(self, tec_type: int):
-        # var range 0-3 (0 = None, 1 = Nomem, 2 = Wire, 3 = SIMPDC)
+        # var range 0-3 (0 = None, 1 = No_mem, 2 = Wire, 3 = SIMPDC)
         self.module_iden_tec_type = tec_type
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_tec_type
@@ -903,7 +960,7 @@ class Detector:
         container2 = SetMessage(
             obj_id=MODULE_IDEN,
             dtype=DTYPE_CONTAINER,
-            data= (
+            data=(
                 iden_type,
                 firm_ver,
                 hard_ver,
@@ -924,8 +981,345 @@ class Detector:
                 th_param4,
                 cool_time
             )
+            # possible to append SetMessage-tuples and byte() conv? -> function that takes tuples and returns bytes?
         )
         container1 = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_IDEN, data=container2, dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(container1))
+        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+            self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, \
+            self.module_iden_prod_date, self.module_iden_det_tec_type, self.module_iden_th_type, \
+            self.module_iden_tec_param1, self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4, \
+            self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3, self.module_iden_th_param4, \
+            self.module_iden_cool_time = rm.parse_data()
 
+    def set_smarttec_mod_no_mem_default_module_iden_type1(self, type1: int):
+        self.smarttec_mod_no_mem_default_module_iden_type1 = type1
+        self._set_smarttec_mod_no_mem_default()
+        return self.smarttec_mod_no_mem_default_module_iden_type1
+
+    def set_smarttec_mod_no_mem_default_module_iden_firm_ver1(self, firm_ver1: int):
+        self.smarttec_mod_no_mem_default_module_iden_firm_ver1 = firm_ver1
+        self._set_smarttec_mod_no_mem_default()
+        return self.smarttec_mod_no_mem_default_module_iden_firm_ver1
+
+    def set_smarttec_mod_no_mem_default_module_iden_hard_ver1(self, hard_ver1: int):
+        self.smarttec_mod_no_mem_default_module_iden_hard_ver1 = hard_ver1
+        self._set_smarttec_mod_no_mem_default()
+        return self.smarttec_mod_no_mem_default_module_iden_hard_ver1
+
+    def set_smarttec_mod_no_mem_default_module_iden_name1(self, name1: str):
+        self.smarttec_mod_no_mem_default_module_iden_name1 = name1
+        self._set_smarttec_mod_no_mem_default()
+        return self.smarttec_mod_no_mem_default_module_iden_name1
+
+    def set_smarttec_mod_no_mem_default_module_iden_type2(self, type2: int):
+        self.smarttec_mod_no_mem_default_module_iden_type2 = type2
+        self._set_smarttec_mod_no_mem_default()
+        return self.smarttec_mod_no_mem_default_module_iden_type2
+
+    def set_smarttec_mod_no_mem_default_module_iden_firm_ver2(self, firm_ver2: int):
+        self.smarttec_mod_no_mem_default_module_iden_firm_ver2 = firm_ver2
+        self._set_smarttec_mod_no_mem_default()
+        return self.smarttec_mod_no_mem_default_module_iden_firm_ver2
+
+    def set_smarttec_mod_no_mem_default_module_iden_hard_ver2(self, hard_ver2: int):
+        self.smarttec_mod_no_mem_default_module_iden_hard_ver2 = hard_ver2
+        self._set_smarttec_mod_no_mem_default()
+        return self.smarttec_mod_no_mem_default_module_iden_hard_ver2
+
+    def set_smarttec_mod_no_mem_default_module_iden_name2(self, name2: str):
+        self.smarttec_mod_no_mem_default_module_iden_name2 = name2
+        self._set_smarttec_mod_no_mem_default()
+        return self.smarttec_mod_no_mem_default_module_iden_name2
+
+    def _set_smarttec_mod_no_mem_default(self):
+        # packages:
+        type1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_TYPE_1,
+                           data=self.smarttec_mod_no_mem_default_module_iden_type1, dtype=DTYPE_UINT8)
+        firm_ver1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_1,
+                               data=self.smarttec_mod_no_mem_default_module_iden_firm_ver1, dtype=DTYPE_UINT16)
+        hard_ver1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_1,
+                               data=self.smarttec_mod_no_mem_default_module_iden_hard_ver1, dtype=DTYPE_UINT16)
+        name1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_NAME_1,
+                           data=self.smarttec_mod_no_mem_default_module_iden_name1, dtype=DTYPE_CSTR)
+
+        type2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_TYPE_2,
+                           data=self.smarttec_mod_no_mem_default_module_iden_type2, dtype=DTYPE_UINT8)
+        firm_ver2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_2,
+                               data=self.smarttec_mod_no_mem_default_module_iden_firm_ver2, dtype=DTYPE_UINT16)
+        hard_ver2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_2,
+                               data=self.smarttec_mod_no_mem_default_module_iden_hard_ver2, dtype=DTYPE_UINT16)
+        name2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_NAME_2,
+                           data=self.smarttec_mod_no_mem_default_module_iden_name2, dtype=DTYPE_CSTR)
+
+        container2 = SetMessage(
+            obj_id=NO_MEM_DEFAULT_MODULE_IDEN,
+            dtype=DTYPE_CONTAINER,
+            data=(type1,
+                  firm_ver1,
+                  hard_ver1,
+                  name1,
+                  type2,
+                  firm_ver2,
+                  hard_ver2,
+                  name2
+                  )
+        )
+
+        container1 = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_IDEN, data=container2, dtype=DTYPE_CONTAINER)
+
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(container1))
+        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+
+    def set_smarttec_mod_no_mem_user_set_module_iden_type1(self, type1: int):
+        self.smarttec_mod_no_mem_user_set_module_iden_type1 = type1
+        self._set_smarttec_mod_no_mem_user_set()
+        return self.smarttec_mod_no_mem_user_set_module_iden_type1
+
+    def set_smarttec_mod_no_mem_user_set_module_iden_firm_ver1(self, firm_ver1: int):
+        self.smarttec_mod_no_mem_user_set_module_iden_firm_ver1 = firm_ver1
+        self._set_smarttec_mod_no_mem_user_set()
+        return self.smarttec_mod_no_mem_user_set_module_iden_firm_ver1
+
+    def set_smarttec_mod_no_mem_user_set_module_iden_hard_ver1(self, hard_ver1: int):
+        self.smarttec_mod_no_mem_user_set_module_iden_hard_ver1 = hard_ver1
+        self._set_smarttec_mod_no_mem_user_set()
+        return self.smarttec_mod_no_mem_user_set_module_iden_hard_ver1
+
+    def set_smarttec_mod_no_mem_user_set_module_iden_name1(self, name1: str):
+        self.smarttec_mod_no_mem_user_set_module_iden_name1 = name1
+        self._set_smarttec_mod_no_mem_user_set()
+        return self.smarttec_mod_no_mem_user_set_module_iden_name1
+
+    def set_smarttec_mod_no_mem_user_set_module_iden_type2(self, type2: int):
+        self.smarttec_mod_no_mem_user_set_module_iden_type2 = type2
+        self._set_smarttec_mod_no_mem_user_set()
+        return self.smarttec_mod_no_mem_user_set_module_iden_type2
+
+    def set_smarttec_mod_no_mem_user_set_module_iden_firm_ver2(self, firm_ver2: int):
+        self.smarttec_mod_no_mem_user_set_module_iden_firm_ver2 = firm_ver2
+        self._set_smarttec_mod_no_mem_user_set()
+        return self.smarttec_mod_no_mem_user_set_module_iden_firm_ver2
+
+    def set_smarttec_mod_no_mem_user_set_module_iden_hard_ver2(self, hard_ver2: int):
+        self.smarttec_mod_no_mem_user_set_module_iden_hard_ver2 = hard_ver2
+        self._set_smarttec_mod_no_mem_user_set()
+        return self.smarttec_mod_no_mem_user_set_module_iden_hard_ver2
+
+    def set_smarttec_mod_no_mem_user_set_module_iden_name2(self, name2: str):
+        self.smarttec_mod_no_mem_user_set_module_iden_name2 = name2
+        self._set_smarttec_mod_no_mem_user_set()
+        return self.smarttec_mod_no_mem_user_set_module_iden_name2
+
+    def _set_smarttec_mod_no_mem_user_set(self):
+        # packages
+        type1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_TYPE_1,
+                           data=self.smarttec_mod_no_mem_user_set_module_iden_type1, dtype=DTYPE_UINT8)
+        firm_ver1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_1,
+                               data=self.smarttec_mod_no_mem_user_set_module_iden_firm_ver1, dtype=DTYPE_UINT16)
+        hard_ver1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_1,
+                               data=self.smarttec_mod_no_mem_user_set_module_iden_hard_ver1, dtype=DTYPE_UINT16)
+        name1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_NAME_1,
+                           data=self.smarttec_mod_no_mem_user_set_module_iden_name1, dtype=DTYPE_CSTR)
+
+        type2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_TYPE_2,
+                           data=self.smarttec_mod_no_mem_user_set_module_iden_type2, dtype=DTYPE_UINT8)
+        firm_ver2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_2,
+                               data=self.smarttec_mod_no_mem_user_set_module_iden_firm_ver2, dtype=DTYPE_UINT16)
+        hard_ver2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_2,
+                               data=self.smarttec_mod_no_mem_user_set_module_iden_hard_ver2, dtype=DTYPE_UINT16)
+        name2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_NAME_2,
+                           data=self.smarttec_mod_no_mem_user_set_module_iden_name2, dtype=DTYPE_CSTR)
+
+        container2 = SetMessage(
+            obj_id=NO_MEM_DEFAULT_MODULE_IDEN,
+            dtype=DTYPE_CONTAINER,
+            data=(type1,
+                  firm_ver1,
+                  hard_ver1,
+                  name1,
+                  type2,
+                  firm_ver2,
+                  hard_ver2,
+                  name2
+                  )
+        )
+
+        container1 = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_USER_SET, data=container2, dtype=DTYPE_CONTAINER)
+
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(container1))
+        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+
+    def set_smarttec_mod_no_mem_user_min_module_iden_type1(self, type1: int):
+        self.smarttec_mod_no_mem_user_min_module_iden_type1 = type1
+        self._set_smarttec_mod_no_mem_user_min()
+        return self.smarttec_mod_no_mem_user_min_module_iden_type1
+
+    def set_smarttec_mod_no_mem_user_min_module_iden_firm_ver1(self, firm_ver1: int):
+        self.smarttec_mod_no_mem_user_min_module_iden_firm_ver1 = firm_ver1
+        self._set_smarttec_mod_no_mem_user_min()
+        return self.smarttec_mod_no_mem_user_min_module_iden_firm_ver1
+
+    def set_smarttec_mod_no_mem_user_min_module_iden_hard_ver1(self, hard_ver1: int):
+        self.smarttec_mod_no_mem_user_min_module_iden_hard_ver1 = hard_ver1
+        self._set_smarttec_mod_no_mem_user_min()
+        return self.smarttec_mod_no_mem_user_min_module_iden_hard_ver1
+
+    def set_smarttec_mod_no_mem_user_min_module_iden_name1(self, name1: str):
+        self.smarttec_mod_no_mem_user_min_module_iden_name1 = name1
+        self._set_smarttec_mod_no_mem_user_min()
+        return self.smarttec_mod_no_mem_user_min_module_iden_name1
+
+    def set_smarttec_mod_no_mem_user_min_module_iden_type2(self, type2: int):
+        self.smarttec_mod_no_mem_user_min_module_iden_type2 = type2
+        self._set_smarttec_mod_no_mem_user_min()
+        return self.smarttec_mod_no_mem_user_min_module_iden_type2
+
+    def set_smarttec_mod_no_mem_user_min_module_iden_firm_ver2(self, firm_ver2: int):
+        self.smarttec_mod_no_mem_user_min_module_iden_firm_ver2 = firm_ver2
+        self._set_smarttec_mod_no_mem_user_min()
+        return self.smarttec_mod_no_mem_user_min_module_iden_firm_ver2
+
+    def set_smarttec_mod_no_mem_user_min_module_iden_hard_ver2(self, hard_ver2: int):
+        self.smarttec_mod_no_mem_user_min_module_iden_hard_ver2 = hard_ver2
+        self._set_smarttec_mod_no_mem_user_min()
+        return self.smarttec_mod_no_mem_user_min_module_iden_hard_ver2
+
+    def set_smarttec_mod_no_mem_user_min_module_iden_name2(self, name2: str):
+        self.smarttec_mod_no_mem_user_min_module_iden_name2 = name2
+        self._set_smarttec_mod_no_mem_user_min()
+        return self.smarttec_mod_no_mem_user_min_module_iden_name2
+
+    def _set_smarttec_mod_no_mem_user_min(self):
+        # packages
+        type1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_TYPE_1,
+                           data=self.smarttec_mod_no_mem_user_min_module_iden_type1, dtype=DTYPE_UINT8)
+        firm_ver1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_1,
+                               data=self.smarttec_mod_no_mem_user_min_module_iden_firm_ver1, dtype=DTYPE_UINT16)
+        hard_ver1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_1,
+                               data=self.smarttec_mod_no_mem_user_min_module_iden_hard_ver1, dtype=DTYPE_UINT16)
+        name1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_NAME_1,
+                           data=self.smarttec_mod_no_mem_user_min_module_iden_name1, dtype=DTYPE_CSTR)
+
+        type2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_TYPE_2,
+                           data=self.smarttec_mod_no_mem_user_min_module_iden_type2, dtype=DTYPE_UINT8)
+        firm_ver2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_2,
+                               data=self.smarttec_mod_no_mem_user_min_module_iden_firm_ver2, dtype=DTYPE_UINT16)
+        hard_ver2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_2,
+                               data=self.smarttec_mod_no_mem_user_min_module_iden_hard_ver2, dtype=DTYPE_UINT16)
+        name2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_NAME_2,
+                           data=self.smarttec_mod_no_mem_user_min_module_iden_name2, dtype=DTYPE_CSTR)
+
+        container2 = SetMessage(
+            obj_id=NO_MEM_DEFAULT_MODULE_IDEN,
+            dtype=DTYPE_CONTAINER,
+            data=(type1,
+                  firm_ver1,
+                  hard_ver1,
+                  name1,
+                  type2,
+                  firm_ver2,
+                  hard_ver2,
+                  name2
+                  )
+        )
+
+        container1 = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_USER_MIN, data=container2, dtype=DTYPE_CONTAINER)
+
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(container1))
+        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+
+    def set_smarttec_mod_no_mem_user_max_module_iden_type1(self, type1: int):
+        self.smarttec_mod_no_mem_user_max_module_iden_type1 = type1
+        self._set_smarttec_mod_no_mem_user_max()
+        return self.smarttec_mod_no_mem_user_max_module_iden_type1
+
+    def set_smarttec_mod_no_mem_user_max_module_iden_firm_ver1(self, firm_ver1: int):
+        self.smarttec_mod_no_mem_user_max_module_iden_firm_ver1 = firm_ver1
+        self._set_smarttec_mod_no_mem_user_max()
+        return self.smarttec_mod_no_mem_user_max_module_iden_firm_ver1
+
+    def set_smarttec_mod_no_mem_user_max_module_iden_hard_ver1(self, hard_ver1: int):
+        self.smarttec_mod_no_mem_user_max_module_iden_hard_ver1 = hard_ver1
+        self._set_smarttec_mod_no_mem_user_max()
+        return self.smarttec_mod_no_mem_user_max_module_iden_hard_ver1
+
+    def set_smarttec_mod_no_mem_user_max_module_iden_name1(self, name1: str):
+        self.smarttec_mod_no_mem_user_max_module_iden_name1 = name1
+        self._set_smarttec_mod_no_mem_user_max()
+        return self.smarttec_mod_no_mem_user_max_module_iden_name1
+
+    def set_smarttec_mod_no_mem_user_max_module_iden_type2(self, type2: int):
+        self.smarttec_mod_no_mem_user_max_module_iden_type2 = type2
+        self._set_smarttec_mod_no_mem_user_max()
+        return self.smarttec_mod_no_mem_user_max_module_iden_type2
+
+    def set_smarttec_mod_no_mem_user_max_module_iden_firm_ver2(self, firm_ver2: int):
+        self.smarttec_mod_no_mem_user_max_module_iden_firm_ver2 = firm_ver2
+        self._set_smarttec_mod_no_mem_user_max()
+        return self.smarttec_mod_no_mem_user_max_module_iden_firm_ver2
+
+    def set_smarttec_mod_no_mem_user_max_module_iden_hard_ver2(self, hard_ver2: int):
+        self.smarttec_mod_no_mem_user_max_module_iden_hard_ver2 = hard_ver2
+        self._set_smarttec_mod_no_mem_user_max()
+        return self.smarttec_mod_no_mem_user_max_module_iden_hard_ver2
+
+    def set_smarttec_mod_no_mem_user_max_module_iden_name2(self, name2: str):
+        self.smarttec_mod_no_mem_user_max_module_iden_name2 = name2
+        self._set_smarttec_mod_no_mem_user_max()
+        return self.smarttec_mod_no_mem_user_max_module_iden_name2
+
+    def _set_smarttec_mod_no_mem_user_max(self):
+        # packages
+        type1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_TYPE_1,
+                           data=self.smarttec_mod_no_mem_user_max_module_iden_type1, dtype=DTYPE_UINT8)
+        firm_ver1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_1,
+                               data=self.smarttec_mod_no_mem_user_max_module_iden_firm_ver1, dtype=DTYPE_UINT16)
+        hard_ver1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_1,
+                               data=self.smarttec_mod_no_mem_user_max_module_iden_hard_ver1, dtype=DTYPE_UINT16)
+        name1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_NAME_1,
+                           data=self.smarttec_mod_no_mem_user_max_module_iden_name1, dtype=DTYPE_CSTR)
+
+        type2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_TYPE_2,
+                           data=self.smarttec_mod_no_mem_user_max_module_iden_type2, dtype=DTYPE_UINT8)
+        firm_ver2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_2,
+                               data=self.smarttec_mod_no_mem_user_max_module_iden_firm_ver2, dtype=DTYPE_UINT16)
+        hard_ver2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_2,
+                               data=self.smarttec_mod_no_mem_user_max_module_iden_hard_ver2, dtype=DTYPE_UINT16)
+        name2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_NAME_2,
+                           data=self.smarttec_mod_no_mem_user_max_module_iden_name2, dtype=DTYPE_CSTR)
+
+        container2 = SetMessage(
+            obj_id=NO_MEM_DEFAULT_MODULE_IDEN,
+            dtype=DTYPE_CONTAINER,
+            data=(type1,
+                  firm_ver1,
+                  hard_ver1,
+                  name1,
+                  type2,
+                  firm_ver2,
+                  hard_ver2,
+                  name2
+                  )
+        )
+
+        container1 = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_USER_MAX, data=container2, dtype=DTYPE_CONTAINER)
+
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(container1))
+        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+
+
+if __name__ == '__main__':
+    with Detector() as x:
+        x.get_module_iden()
+        print('NAME' + x.module_iden_name)
+        x._set_smarttec_mod_no_mem_iden()
