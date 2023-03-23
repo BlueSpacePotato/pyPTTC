@@ -127,6 +127,18 @@ NO_MEM_DEFAULT_MODULE_IDEN_NAME_2 = 9351  # 2487
 NO_MEM_DEFAULT_MODULE_IDEN = 9216  # 2400
 NO_MEM_DEFAULT_SET_SMARTTEC_MOD_NO_MEM_IDEN = 1584  # 630
 
+# module basic params:
+MODULE_BASIC_PARAMS_SUP_CTRL = 9235  # hex: 2413
+MODULE_BASIC_PARAMS_U_SUP_PLUS = 9252  # hex: 2424
+MODULE_BASIC_PARAMS_U_SUP_MINUS = 9268  # hex: 2434
+MODULE_BASIC_PARAMS_FAN_CTRL = 9283  # hex: 2443
+MODULE_BASIC_PARAMS_TEC_CTRL = 9299  # 2453
+MODULE_BASIC_PARAMS_PWM = 9317  # 2465
+MODULE_BASIC_PARAMS_I_TEC_MAX = 9332  # 2474
+MODULE_BASIC_PARAMS_T_DET = 9351  # 2487
+HEAD_MODULE_IDEN = 9216  # 2400
+HEAD_SET_SMARTTEC_MOD_NO_MEM_IDEN = 2128  # 0850
+
 
 class TemplateMessage:
     """
@@ -516,6 +528,8 @@ class Detector:
         self.smarttec_mod_no_mem_user_max_module_iden_firm_ver2 = None
         self.smarttec_mod_no_mem_user_max_module_iden_hard_ver2 = None
         self.smarttec_mod_no_mem_user_max_module_iden_name2 = None
+
+        # set module iden -> same variables as module iden
 
     def __enter__(self):
         """
@@ -1316,6 +1330,332 @@ class Detector:
         self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
             self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
             self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+
+    def set_module_iden_type(self, mtype: int):
+        self.module_iden_type = mtype
+        self._set_module_iden()
+        return self.module_iden_type
+
+    def set_module_iden_firm_ver(self, firm_ver: int):
+        self.module_iden_firm_ver = firm_ver
+        self._set_module_iden()
+        return self.module_iden_firm_ver
+
+    def set_module_iden_hard_ver(self, hard_ver: int):
+        self.module_iden_hard_ver = hard_ver
+        self._set_module_iden()
+        return self.module_iden_hard_ver
+
+    def set_module_iden_name(self, name: str):
+        self.module_iden_name = name
+        self._set_module_iden()
+        return self.module_iden_name
+
+    def set_module_iden_serial(self, mserial: DTYPE_SERIAL):
+        self.module_iden_serial = mserial
+        self._set_module_iden()
+        return self.module_iden_serial
+
+    def set_module_iden_det_name(self, det_name: str):
+        self.module_iden_det_name = det_name
+        self._set_module_iden()
+        return self.module_iden_det_name
+
+    def set_module_iden_det_serial(self, det_serial: DTYPE_SERIAL):
+        self.module_iden_det_serial = det_serial
+        self._set_module_iden()
+        return self.module_iden_det_serial
+
+    def set_module_iden_prod_date(self, prod_date: DTYPE_DATE_TIME):
+        self.module_iden_prod_date = prod_date
+        self._set_module_iden()
+        return self.module_iden_prod_date
+
+    def set_module_iden_tec_type(self, tec_type: int):
+        self.module_iden_tec_type = tec_type
+        self._set_module_iden()
+        return self.module_iden_tec_type
+
+    def set_module_iden_th_type(self, th_type: int):
+        self.module_iden_th_type = th_type
+        self._set_module_iden()
+        return self.module_iden_th_type
+
+    def set_module_iden_tec_param1(self, param1: float):
+        self.module_iden_tec_param1 = param1
+        self._set_module_iden()
+        return self.module_iden_tec_param1
+
+    def set_module_iden_tec_param2(self, param2: float):
+        self.module_iden_tec_param2 = param2
+        self._set_module_iden()
+        return self.module_iden_tec_param2
+
+    def set_module_iden_tec_param3(self, param3: float):
+        self.module_iden_tec_param3 = param3
+        self._set_module_iden()
+        return self.module_iden_tec_param3
+
+    def set_module_iden_tec_param4(self, param4: float):
+        self.module_iden_tec_param4 = param4
+        self._set_module_iden()
+        return self.module_iden_tec_param4
+
+    def set_module_iden_th_param1(self, param1: float):
+        self.module_iden_th_param1 = param1
+        self._set_module_iden()
+        return self.module_iden_th_param1
+
+    def set_module_iden_th_param2(self, param2: float):
+        self.module_iden_th_param2 = param2
+        self._set_module_iden()
+        return self.module_iden_th_param2
+
+    def set_module_iden_th_param3(self, param3: float):
+        self.module_iden_th_param3 = param3
+        self._set_module_iden()
+        return self.module_iden_th_param3
+
+    def set_module_iden_th_param4(self, param4: float):
+        self.module_iden_th_param4 = param4
+        self._set_module_iden()
+        return self.module_iden_th_param4
+
+    def set_module_iden_cool_time(self, cool_time: int):
+        self.module_iden_cool_time = cool_time
+        self._set_module_iden()
+        return self.module_iden_cool_time
+
+    def _set_module_iden(self):
+        # packages
+        mtype = SetMessage(obj_id=MODULE_IDEN_TYPE, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver = SetMessage(obj_id=MODULE_IDEN_FIRM_VER, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
+        hard_ver = SetMessage(obj_id=MODULE_IDEN_HARD_VER, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
+        name = SetMessage(obj_id=MODULE_IDEN_NAME, data=self.module_iden_name, dtype=DTYPE_CSTR)
+        mserial = SetMessage(obj_id=MODULE_IDEN_SERIAL, data=self.module_iden_serial, dtype=DTYPE_SERIAL)
+        det_name = SetMessage(obj_id=MODULE_IDEN_DET_NAME, data=self.module_iden_det_name, dtype=DTYPE_CSTR)
+        det_serial = SetMessage(obj_id=MODULE_IDEN_DET_SERIAL, data=self.module_iden_det_serial, dtype=DTYPE_SERIAL)
+        prod_date = SetMessage(obj_id=MODULE_IDEN_PROD_DATE, data=self.module_iden_prod_date, dtype=DTYPE_DATE_TIME)
+        tec_type = SetMessage(obj_id=MODULE_IDEN_TEC_TYPE, data=self.module_iden_tec_type, dtype=DTYPE_UINT8)
+        th_type = SetMessage(obj_id=MODULE_IDEN_TH_TYPE, data=self.module_iden_th_type, dtype=DTYPE_UINT8)
+        tec_param1 = SetMessage(obj_id=MODULE_IDEN_TEC_PARAM1, data=self.module_iden_tec_param1, dtype=DTYPE_FLOAT)
+        tec_param2 = SetMessage(obj_id=MODULE_IDEN_TEC_PARAM2, data=self.module_iden_tec_param2, dtype=DTYPE_FLOAT)
+        tec_param3 = SetMessage(obj_id=MODULE_IDEN_TEC_PARAM3, data=self.module_iden_tec_param3, dtype=DTYPE_FLOAT)
+        tec_param4 = SetMessage(obj_id=MODULE_IDEN_TEC_PARAM4, data=self.module_iden_tec_param4, dtype=DTYPE_FLOAT)
+        th_param1 = SetMessage(obj_id=MODULE_IDEN_TH_PARAM1, data=self.module_iden_th_param1, dtype=DTYPE_FLOAT)
+        th_param2 = SetMessage(obj_id=MODULE_IDEN_TH_PARAM2, data=self.module_iden_th_param2, dtype=DTYPE_FLOAT)
+        th_param3 = SetMessage(obj_id=MODULE_IDEN_TH_PARAM3, data=self.module_iden_th_param3, dtype=DTYPE_FLOAT)
+        th_param4 = SetMessage(obj_id=MODULE_IDEN_TH_PARAM4, data=self.module_iden_th_param4, dtype=DTYPE_FLOAT)
+        cool_time = SetMessage(obj_id=MODULE_IDEN_COOL_TIME, data=self.module_iden_cool_time, dtype=DTYPE_UINT16)
+
+        module_iden = SetMessage(obj_id=MODULE_IDEN, data=(mtype, firm_ver,
+                                                           hard_ver, name,
+                                                           mserial, det_name,
+                                                           det_serial, prod_date,
+                                                           tec_type, th_type,
+                                                           tec_param1, tec_param2,
+                                                           tec_param3, tec_param4,
+                                                           th_param1, th_param2,
+                                                           th_param3, th_param4,
+                                                           cool_time), dtype=DTYPE_CONTAINER)
+
+        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_IDEN, data=module_iden, dtype=DTYPE_CONTAINER)
+
+        rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
+
+        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+            self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, self.module_iden_prod_date, \
+            self.module_iden_tec_type, self.module_iden_th_type, self.module_iden_tec_param1, self.module_iden_tec_param2, \
+            self.module_iden_tec_param3, self.module_iden_tec_param4, self.module_iden_th_param1, self.module_iden_th_param2, \
+            self.module_iden_th_param3, self.module_iden_th_param4, self.module_iden_cool_time = rm.parse_data()
+
+    def set_module_default(self):
+        # packages:
+        i_type1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_SUP_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
+        hard_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
+        name1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_iden_name, dtype=DTYPE_CSTR)
+        i_type2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
+        hard_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
+        name2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_iden_name, dtype=DTYPE_CSTR)
+
+        head_module_iden = SetMessage(obj_id=HEAD_MODULE_IDEN, data=(i_type1, firm_ver1,
+                                                                     hard_ver1, name1,
+                                                                     i_type2, firm_ver2,
+                                                                     hard_ver2, name2), dtype=DTYPE_CONTAINER)
+
+        head_set_smarttec_mod_no_mem_iden = SetMessage(obj_id=HEAD_SET_SMARTTEC_MOD_NO_MEM_IDEN, data=head_module_iden, dtype=DTYPE_CONTAINER)
+
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(head_set_smarttec_mod_no_mem_iden))
+
+        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name = rm.parse_data()
+
+    def set_module_user_set(self):
+        # packages:
+        i_type1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_SUP_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
+        hard_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
+        name1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_iden_name, dtype=DTYPE_CSTR)
+        i_type2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
+        hard_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
+        name2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_iden_name, dtype=DTYPE_CSTR)
+
+        head_module_iden = SetMessage(obj_id=HEAD_MODULE_IDEN, data=(i_type1, firm_ver1,
+                                                                     hard_ver1, name1,
+                                                                     i_type2, firm_ver2,
+                                                                     hard_ver2, name2), dtype=DTYPE_CONTAINER)
+
+        head_set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_USER_SET, data=head_module_iden, dtype=DTYPE_CONTAINER)
+
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(head_set_smarttec_mod_no_mem_iden))
+
+        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name = rm.parse_data()
+
+    def set_module_user_min(self):
+        # packages:
+        i_type1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_SUP_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
+        hard_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
+        name1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_iden_name, dtype=DTYPE_CSTR)
+        i_type2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
+        hard_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
+        name2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_iden_name, dtype=DTYPE_CSTR)
+
+        head_module_iden = SetMessage(obj_id=HEAD_MODULE_IDEN, data=(i_type1, firm_ver1,
+                                                                     hard_ver1, name1,
+                                                                     i_type2, firm_ver2,
+                                                                     hard_ver2, name2), dtype=DTYPE_CONTAINER)
+
+        head_set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_USER_MIN, data=head_module_iden, dtype=DTYPE_CONTAINER)
+
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(head_set_smarttec_mod_no_mem_iden))
+
+        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name = rm.parse_data()
+
+    def set_module_user_max(self):
+        # packages:
+        i_type1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_SUP_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
+        hard_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
+        name1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_iden_name, dtype=DTYPE_CSTR)
+        i_type2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
+        hard_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
+        name2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_iden_name, dtype=DTYPE_CSTR)
+
+        head_module_iden = SetMessage(obj_id=HEAD_MODULE_IDEN, data=(i_type1, firm_ver1,
+                                                                     hard_ver1, name1,
+                                                                     i_type2, firm_ver2,
+                                                                     hard_ver2, name2), dtype=DTYPE_CONTAINER)
+
+        head_set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_USER_MAX, data=head_module_iden, dtype=DTYPE_CONTAINER)
+
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(head_set_smarttec_mod_no_mem_iden))
+
+        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name = rm.parse_data()
+
+    def set_module_smipdc_default(self):
+        # packages:
+        det_u = SetMessage(obj_id=MODULE_BASIC_PARAMS_SUP_CTRL, data=self.module_smipdc_params_det_u, dtype=DTYPE_UINT16)
+        det_i = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
+        gain = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
+        offset = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_smipdc_params_offset, dtype=DTYPE_UINT16)
+        varactor = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_smipdc_params_varactor, dtype=DTYPE_UINT16)
+        trans = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_smipdc_params_trans, dtype=DTYPE_UINT8)
+        acdc = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
+        bw = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
+
+        module_iden = SetMessage(obj_id=MODULE_SMIPDC_PARAMS, data=(det_u, det_i,
+                                                                    gain, offset,
+                                                                    varactor, trans,
+                                                                    acdc, bw), dtype=DTYPE_CONTAINER)
+
+        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_SMIPDC_DEFAULT, data=module_iden, dtype=DTYPE_CONTAINER)
+
+        rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
+
+        self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+            self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+            self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+
+    def set_module_smipdc_user_set(self):
+        # packages:
+        det_u = SetMessage(obj_id=MODULE_BASIC_PARAMS_SUP_CTRL, data=self.module_smipdc_params_det_u, dtype=DTYPE_UINT16)
+        det_i = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
+        gain = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
+        offset = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_smipdc_params_offset, dtype=DTYPE_UINT16)
+        varactor = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_smipdc_params_varactor, dtype=DTYPE_UINT16)
+        trans = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_smipdc_params_trans, dtype=DTYPE_UINT8)
+        acdc = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
+        bw = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
+
+        module_iden = SetMessage(obj_id=MODULE_SMIPDC_PARAMS, data=(det_u, det_i,
+                                                                    gain, offset,
+                                                                    varactor, trans,
+                                                                    acdc, bw), dtype=DTYPE_CONTAINER)
+
+        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_SMIPDC_USER_SET, data=module_iden, dtype=DTYPE_CONTAINER)
+
+        rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
+
+        self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+            self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+            self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+
+    def set_module_smipdc_user_min(self):
+        # packages:
+        det_u = SetMessage(obj_id=MODULE_BASIC_PARAMS_SUP_CTRL, data=self.module_smipdc_params_det_u, dtype=DTYPE_UINT16)
+        det_i = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
+        gain = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
+        offset = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_smipdc_params_offset, dtype=DTYPE_UINT16)
+        varactor = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_smipdc_params_varactor, dtype=DTYPE_UINT16)
+        trans = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_smipdc_params_trans, dtype=DTYPE_UINT8)
+        acdc = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
+        bw = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
+
+        module_iden = SetMessage(obj_id=MODULE_SMIPDC_PARAMS, data=(det_u, det_i,
+                                                                    gain, offset,
+                                                                    varactor, trans,
+                                                                    acdc, bw), dtype=DTYPE_CONTAINER)
+
+        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_SMIPDC_USER_MIN, data=module_iden, dtype=DTYPE_CONTAINER)
+
+        rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
+
+        self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+            self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+            self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+
+    def set_module_smipdc_user_max(self):
+        # packages:
+        det_u = SetMessage(obj_id=MODULE_BASIC_PARAMS_SUP_CTRL, data=self.module_smipdc_params_det_u, dtype=DTYPE_UINT16)
+        det_i = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
+        gain = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
+        offset = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_smipdc_params_offset, dtype=DTYPE_UINT16)
+        varactor = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_smipdc_params_varactor, dtype=DTYPE_UINT16)
+        trans = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_smipdc_params_trans, dtype=DTYPE_UINT8)
+        acdc = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
+        bw = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
+
+        module_iden = SetMessage(obj_id=MODULE_SMIPDC_PARAMS, data=(det_u, det_i,
+                                                                    gain, offset,
+                                                                    varactor, trans,
+                                                                    acdc, bw), dtype=DTYPE_CONTAINER)
+
+        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_SMIPDC_USER_MAX, data=module_iden, dtype=DTYPE_CONTAINER)
+
+        rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
+
+        self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+            self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+            self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
 
 
 if __name__ == '__main__':
