@@ -28,8 +28,8 @@ OBJECT_LENGTH = [None, None, 5, 5, 6, 6, 8, 8, 8, 12, 8, 5]
 
 # get/set - for all types of modules
 GET_SERVICE_MODE = 1024
-SET_SERVICE_MODE = 1040
-SET_TRANSPARENT_MODE = 1104
+SET_SERVICE_MODE = 1040  # 0x0410
+SET_TRANSPARENT_MODE = 1104  # 0x0450
 GET_DEVICE_IDEN = 32
 SET_DEVICE_IDEN = 48
 
@@ -38,7 +38,8 @@ GET_SMARTTEC_CONFIG = 1280
 SET_SMARTTEC_CONFIG = 1296
 GET_SMARTTEC_MONITOR = 1312
 GET_SMARTTEC_MOD_NO_MEM_IDEN = 1536
-SET_SMARTTEC_MOD_NO_MEM_IDEN = 1552
+SET_SMARTTEC_MOD_NO_MEM_IDEN = 1584  # 0x0630
+SET_SMARTTEC_MOD_NO_MEM_IDEN_2 = 1552  # 0x0610
 GET_SMARTTEC_MOD_NO_MEM_DEFAULT = 1568
 SET_SMARTTEC_MOD_NO_MEM_DEFAULT = 1584
 GET_SMARTTEC_MOD_NO_MEM_USER_SET = 1600
@@ -76,8 +77,8 @@ STORE_MODULE_SMIPDC_PARAMS = 2896
 # object list - container
 DEVICE_IDEN = 256
 DEVICE_CHECK = 512
-SERVICE_MODE = 4096
-TRANSPARENT_MODE = 5120
+SERVICE_MODE = 4096  # 0x1000
+TRANSPARENT_MODE = 5120  # 0x1400
 SMARTTEC_CONFIG = 6144
 SMARTTEC_MONITOR = 7168
 MODULE_IDEN = 8192
@@ -88,9 +89,9 @@ MODULE_SMIPDC_MONITOR = 11264
 MODULE_SMIPDC_PARAMS = 12288
 
 # object list - base objects
-SERVICE_MODE_ENABLE = 4123
+SERVICE_MODE_ENABLE = 4123  # 0x101B
 
-TRANSPARENT_MODE_ENABLE = 5147
+TRANSPARENT_MODE_ENABLE = 5147  # 0x141B
 
 SMARTTEC_CONFIG_VARIANT = 6163
 SMARTTEC_CONFIG_NO_MEM_COMPATIBLE = 6187
@@ -129,6 +130,8 @@ NO_MEM_DEFAULT_SET_SMARTTEC_MOD_NO_MEM_IDEN = 1584  # 630
 
 # module basic params:
 MODULE_BASIC_PARAMS_SUP_CTRL = 9235  # hex: 2413
+MODULE_SMIPDC_PARAMS_DET_U = 9235
+MODULE_BASIC_PARAMS_DET_1 = 9252
 MODULE_BASIC_PARAMS_U_SUP_PLUS = 9252  # hex: 2424
 MODULE_BASIC_PARAMS_U_SUP_MINUS = 9268  # hex: 2434
 MODULE_BASIC_PARAMS_FAN_CTRL = 9283  # hex: 2443
@@ -138,6 +141,17 @@ MODULE_BASIC_PARAMS_I_TEC_MAX = 9332  # 2474
 MODULE_BASIC_PARAMS_T_DET = 9351  # 2487
 HEAD_MODULE_IDEN = 9216  # 2400
 HEAD_SET_SMARTTEC_MOD_NO_MEM_IDEN = 2128  # 0850
+MODULE_IDEN_SMIPDC_DEFAULT = 12288
+
+# module_smipdc_user_set/min/max
+MODULE_SMIPDC_PARAMS_DET_U_SET = 12309  # 0x3015
+MODULE_SMIPDC_PARAMS_DET_I_SET = 12325  # 0x3025
+MODULE_SMIPDC_PARAMS_GAIN_SET = 12341  # 0x3035
+MODULE_SMIPDC_PARAMS_OFFSET_SET = 12357  # 0x3045
+MODULE_SMIPDC_PARAMS_VARACTOR_SET = 12373  # 0x3055
+MODULE_SMIPDC_PARAMS_TRANS_SET = 12387  # 0x3063
+MODULE_SMIPDC_PARAMS_ACDC_SET = 12403  # 0x3073
+MODULE_SMIPDC_PARAMS_BW_SET = 12419  # 0x3083
 
 
 class TemplateMessage:
@@ -1440,16 +1454,19 @@ class Detector:
         hard_ver = SetMessage(obj_id=MODULE_IDEN_HARD_VER, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
         name = SetMessage(obj_id=MODULE_IDEN_NAME, data=self.module_iden_name, dtype=DTYPE_CSTR)
         mserial = SetMessage(obj_id=MODULE_IDEN_SERIAL, data=self.module_iden_serial, dtype=DTYPE_SERIAL)
+
         det_name = SetMessage(obj_id=MODULE_IDEN_DET_NAME, data=self.module_iden_det_name, dtype=DTYPE_CSTR)
         det_serial = SetMessage(obj_id=MODULE_IDEN_DET_SERIAL, data=self.module_iden_det_serial, dtype=DTYPE_SERIAL)
         prod_date = SetMessage(obj_id=MODULE_IDEN_PROD_DATE, data=self.module_iden_prod_date, dtype=DTYPE_DATE_TIME)
         tec_type = SetMessage(obj_id=MODULE_IDEN_TEC_TYPE, data=self.module_iden_tec_type, dtype=DTYPE_UINT8)
         th_type = SetMessage(obj_id=MODULE_IDEN_TH_TYPE, data=self.module_iden_th_type, dtype=DTYPE_UINT8)
+
         tec_param1 = SetMessage(obj_id=MODULE_IDEN_TEC_PARAM1, data=self.module_iden_tec_param1, dtype=DTYPE_FLOAT)
         tec_param2 = SetMessage(obj_id=MODULE_IDEN_TEC_PARAM2, data=self.module_iden_tec_param2, dtype=DTYPE_FLOAT)
         tec_param3 = SetMessage(obj_id=MODULE_IDEN_TEC_PARAM3, data=self.module_iden_tec_param3, dtype=DTYPE_FLOAT)
         tec_param4 = SetMessage(obj_id=MODULE_IDEN_TEC_PARAM4, data=self.module_iden_tec_param4, dtype=DTYPE_FLOAT)
         th_param1 = SetMessage(obj_id=MODULE_IDEN_TH_PARAM1, data=self.module_iden_th_param1, dtype=DTYPE_FLOAT)
+
         th_param2 = SetMessage(obj_id=MODULE_IDEN_TH_PARAM2, data=self.module_iden_th_param2, dtype=DTYPE_FLOAT)
         th_param3 = SetMessage(obj_id=MODULE_IDEN_TH_PARAM3, data=self.module_iden_th_param3, dtype=DTYPE_FLOAT)
         th_param4 = SetMessage(obj_id=MODULE_IDEN_TH_PARAM4, data=self.module_iden_th_param4, dtype=DTYPE_FLOAT)
@@ -1466,7 +1483,7 @@ class Detector:
                                                            th_param3, th_param4,
                                                            cool_time), dtype=DTYPE_CONTAINER)
 
-        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_IDEN, data=module_iden, dtype=DTYPE_CONTAINER)
+        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_IDEN_2, data=module_iden, dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
 
@@ -1482,6 +1499,7 @@ class Detector:
         firm_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
         hard_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
         name1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_iden_name, dtype=DTYPE_CSTR)
+
         i_type2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
         firm_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
         hard_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
@@ -1505,6 +1523,7 @@ class Detector:
         firm_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
         hard_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
         name1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_iden_name, dtype=DTYPE_CSTR)
+
         i_type2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
         firm_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
         hard_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
@@ -1528,6 +1547,7 @@ class Detector:
         firm_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
         hard_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
         name1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_iden_name, dtype=DTYPE_CSTR)
+
         i_type2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
         firm_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
         hard_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
@@ -1551,6 +1571,7 @@ class Detector:
         firm_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
         hard_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
         name1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_iden_name, dtype=DTYPE_CSTR)
+
         i_type2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
         firm_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
         hard_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
@@ -1574,12 +1595,13 @@ class Detector:
         det_i = SetMessage(obj_id=MODULE_BASIC_PARAMS_DET_1, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
         gain = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
         offset = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_smipdc_params_offset, dtype=DTYPE_UINT16)
+
         varactor = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_smipdc_params_varactor, dtype=DTYPE_UINT16)
         trans = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_smipdc_params_trans, dtype=DTYPE_UINT8)
         acdc = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
         bw = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
 
-        module_iden = SetMessage(obj_id=MODULE_IDEN, data=(det_u, det_i,
+        module_iden = SetMessage(obj_id=MODULE_IDEN_SMIPDC_DEFAULT, data=(det_u, det_i,
                                                                     gain, offset,
                                                                     varactor, trans,
                                                                     acdc, bw), dtype=DTYPE_CONTAINER)
@@ -1594,14 +1616,15 @@ class Detector:
 
     def set_module_smipdc_user_set(self):
         # packages:
-        det_u = SetMessage(obj_id=MODULE_BASIC_PARAMS_SUP_CTRL, data=self.module_smipdc_params_det_u, dtype=DTYPE_UINT16)
-        det_i = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
-        gain = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
-        offset = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_smipdc_params_offset, dtype=DTYPE_UINT16)
-        varactor = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_smipdc_params_varactor, dtype=DTYPE_UINT16)
-        trans = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_smipdc_params_trans, dtype=DTYPE_UINT8)
-        acdc = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
-        bw = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
+        det_u = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_U_SET, data=self.module_smipdc_params_det_u, dtype=DTYPE_UINT16)
+        det_i = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_I_SET, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
+        gain = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_GAIN_SET, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
+        offset = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_OFFSET_SET, data=self.module_smipdc_params_offset, dtype=DTYPE_UINT16)
+
+        varactor = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_VARACTOR_SET, data=self.module_smipdc_params_varactor, dtype=DTYPE_UINT16)
+        trans = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_TRANS_SET, data=self.module_smipdc_params_trans, dtype=DTYPE_UINT8)
+        acdc = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_ACDC_SET, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
+        bw = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_BW_SET, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
 
         module_iden = SetMessage(obj_id=MODULE_SMIPDC_PARAMS, data=(det_u, det_i,
                                                                     gain, offset,
@@ -1618,14 +1641,15 @@ class Detector:
 
     def set_module_smipdc_user_min(self):
         # packages:
-        det_u = SetMessage(obj_id=MODULE_BASIC_PARAMS_SUP_CTRL, data=self.module_smipdc_params_det_u, dtype=DTYPE_UINT16)
-        det_i = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
-        gain = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
-        offset = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_smipdc_params_offset, dtype=DTYPE_UINT16)
-        varactor = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_smipdc_params_varactor, dtype=DTYPE_UINT16)
-        trans = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_smipdc_params_trans, dtype=DTYPE_UINT8)
-        acdc = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
-        bw = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
+        det_u = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_U_SET, data=self.module_smipdc_params_det_u, dtype=DTYPE_UINT16)
+        det_i = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_I_SET, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
+        gain = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_GAIN_SET, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
+        offset = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_OFFSET_SET, data=self.module_smipdc_params_offset, dtype=DTYPE_UINT16)
+
+        varactor = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_VARACTOR_SET, data=self.module_smipdc_params_varactor, dtype=DTYPE_UINT16)
+        trans = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_TRANS_SET, data=self.module_smipdc_params_trans, dtype=DTYPE_UINT8)
+        acdc = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_ACDC_SET, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
+        bw = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_BW_SET, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
 
         module_iden = SetMessage(obj_id=MODULE_SMIPDC_PARAMS, data=(det_u, det_i,
                                                                     gain, offset,
@@ -1642,14 +1666,15 @@ class Detector:
 
     def set_module_smipdc_user_max(self):
         # packages:
-        det_u = SetMessage(obj_id=MODULE_BASIC_PARAMS_SUP_CTRL, data=self.module_smipdc_params_det_u, dtype=DTYPE_UINT16)
-        det_i = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
-        gain = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
-        offset = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_smipdc_params_offset, dtype=DTYPE_UINT16)
-        varactor = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_smipdc_params_varactor, dtype=DTYPE_UINT16)
-        trans = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_smipdc_params_trans, dtype=DTYPE_UINT8)
-        acdc = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
-        bw = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
+        det_u = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_U_SET, data=self.module_smipdc_params_det_u, dtype=DTYPE_UINT16)
+        det_i = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_I_SET, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
+        gain = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_GAIN_SET, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
+        offset = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_OFFSET_SET, data=self.module_smipdc_params_offset, dtype=DTYPE_UINT16)
+
+        varactor = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_VARACTOR_SET, data=self.module_smipdc_params_varactor, dtype=DTYPE_UINT16)
+        trans = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_TRANS_SET, data=self.module_smipdc_params_trans, dtype=DTYPE_UINT8)
+        acdc = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_ACDC_SET, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
+        bw = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_BW_SET, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
 
         module_iden = SetMessage(obj_id=MODULE_SMIPDC_PARAMS, data=(det_u, det_i,
                                                                     gain, offset,
