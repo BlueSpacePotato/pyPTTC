@@ -145,12 +145,16 @@ class TemplateMessage:
     Template class TemplateMessage
     """
 
-    def __init__(self, obj_id: int, data: bytes | tuple = None):
+    def __init__(self, obj_id: int = None, data: bytes | tuple = None, dtype: int = None):
         # unique object number
         self.obj_id = obj_id
 
+        self.dtype = dtype
+
         # basic data - only 1 package
         self.data = '' if data is None else data
+
+
 
         self.dlen = self.get_dlen()
 
@@ -209,16 +213,14 @@ class SetMessage(TemplateMessage):
     """
 
     def __init__(self, obj_id: int, dtype: int, data: bytes | tuple | TemplateMessage = ''):
-        super().__init__(obj_id=obj_id)
+        super().__init__()
         # unique object number
         self.obj_id = obj_id
-        print(self.obj_id)
+        # print(self.obj_id)
         if isinstance(data, tuple):
             self.data = b''
             for d in data:
-                print('objid:', d.obj_id)
                 self.data += d.get_field_data()
-            print(self.data)
         else:
             self.data = data
 
@@ -242,9 +244,9 @@ class SetMessage(TemplateMessage):
         if self.dtype == DTYPE_CONTAINER:
             len_dtype = 4 + self.data.dlen
         elif self.dtype == DTYPE_CSTR:
-            print(self.data)
+            # print(self.data)
             if self.data is not None:
-                print(self.data)
+                # print(self.data)
                 len_dtype = 4 + len(self.data)
             else:
                 raise ValueError('data cant be None for dtype cstr')
@@ -277,7 +279,6 @@ class SetMessage(TemplateMessage):
         else:
             data = self.int_to_bytes(self.obj_id) + self.int_to_bytes(self.dlen) + self.int_to_bytes(int(self.data), (
                     self.dlen - 4) * 2)
-
         if is_container:
             return data
 
@@ -303,7 +304,7 @@ class ResponseMessage(TemplateMessage):
 
         if data is None:
             data = self.data
-        print(data)
+        # print(data)
         dtype = int(data[1:5], base=16) & 1028
         if dtype == DTYPE_CONTAINER:
             data = self.parse_container(self.data[9:-5])
@@ -326,10 +327,12 @@ class ResponseMessage(TemplateMessage):
             dtype = int(obj_id[-1:], base=16)
 
             d = container[dlen_stop:dlen_stop + tmp * 2 - 8]
-            print(f'objectID: {int(obj_id, base=16)}, DTYPE: {dtype}, d: {d}')
+            # print(f'objectID: {int(obj_id, base=16)}, DTYPE: {dtype}, d: {d}')
             if dtype == DTYPE_BOOL:
                 data.append(bool(d))
             elif dtype == DTYPE_INT8 or dtype == DTYPE_INT16 or dtype == DTYPE_INT32:
+                data.append(int(d, base=16))
+            elif dtype == DTYPE_UINT8 or dtype == DTYPE_UINT16 or dtype == DTYPE_UINT32:
                 data.append(int(d, base=16))
             elif dtype == DTYPE_FLOAT:
                 data.append(float.fromhex(d.decode('utf-8')))
@@ -342,10 +345,12 @@ class ResponseMessage(TemplateMessage):
                 M = int(d[12:14], base=16)
                 Y = int(d[14:], base=16) + 1900
                 data.append({'ms': ms, 's': s, 'm': m, 'h': h, 'D': D, 'M': M, 'Y': Y})
+            elif dtype == DTYPE_SERIAL:
+                data.append(d)
             elif dtype == DTYPE_CSTR:
-                print(str(d))
+                # print(str(d))
                 data.append(str(d))
-                print(str(d))
+                # print(str(d))
 
             # data.append(container[dlen_stop:dlen_stop + tmp * 2 - 8])
 
@@ -594,7 +599,7 @@ class Detector:
             raise TypeError('Obj should be a BasicObject')
 
         mes = '$' + obj.get_field_data() + '#'
-        print(mes)
+        # print(mes)
         self._serial.write(mes.encode('UTF-8'))
 
         return self._serial.readline()
@@ -741,13 +746,15 @@ class Detector:
                 self.module_smipdc_monitor_u_out, self.module_smipdc_monitor_temp = rm.parse_data()
 
     def get_module_smipdc_default(self):
-        obj = QueryMessage(obj_id=MODULE_SMIPDC_PARAMS)
+        obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_DEFAULT)
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
 
         if rm.is_valid():
             self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
                 self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
                 self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        else:
+            raise ValueError('Response not Valid!')
 
     def get_module_smipdc_user_set(self):
         obj = QueryMessage(obj_id=MODULE_SMIPDC_PARAMS)
@@ -1563,8 +1570,8 @@ class Detector:
 
     def set_module_smipdc_default(self):
         # packages:
-        det_u = SetMessage(obj_id=MODULE_BASIC_PARAMS_SUP_CTRL, data=self.module_smipdc_params_det_u, dtype=DTYPE_UINT16)
-        det_i = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
+        det_u = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_U, data=self.module_smipdc_params_det_u, dtype=DTYPE_UINT16)
+        det_i = SetMessage(obj_id=MODULE_BASIC_PARAMS_DET_1, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
         gain = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
         offset = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_smipdc_params_offset, dtype=DTYPE_UINT16)
         varactor = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_smipdc_params_varactor, dtype=DTYPE_UINT16)
@@ -1572,7 +1579,7 @@ class Detector:
         acdc = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
         bw = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
 
-        module_iden = SetMessage(obj_id=MODULE_SMIPDC_PARAMS, data=(det_u, det_i,
+        module_iden = SetMessage(obj_id=MODULE_IDEN, data=(det_u, det_i,
                                                                     gain, offset,
                                                                     varactor, trans,
                                                                     acdc, bw), dtype=DTYPE_CONTAINER)
@@ -1659,7 +1666,15 @@ class Detector:
 
 
 if __name__ == '__main__':
-    with Detector() as x:
-        x.get_module_iden()
-        print('NAME' + x.module_iden_name)
-        x._set_smarttec_mod_no_mem_iden()
+    with Detector(port_name='COM7') as x:
+        x.get_device_iden()
+        x.get_module_user_set()
+        x.get_module_smipdc_default()
+        print('1')
+        print(x.module_smipdc_params_gain)
+        x.module_smipdc_params_gain = 20
+        print('2')
+        print(x.module_smipdc_params_gain)
+        print('3')
+        x.set_module_smipdc_default()
+        print(x.module_smipdc_params_gain)
