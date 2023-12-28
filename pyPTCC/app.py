@@ -303,7 +303,8 @@ class ResponseMessage(TemplateMessage):
     """
 
     def is_valid(self):
-
+        """ data empty - false
+            data existing - true"""
         if self.data == b'':
             return False
         return True
@@ -848,8 +849,11 @@ class Detector:
         # head_set_service_mode contains "head_service_mode", that contains "service_mode" -> is container
 
         rm = ResponseMessage(obj_id=SERVICE_MODE, data=self.write_and_read(head_set_service_mode))
+
         if rm.is_valid():
             self.service_mode = int(rm.parse_data()[0])
+        else:
+            raise TypeError("no data - _set_service_mode()")
 
     def set_transparent_mode(self, mode: int):
         # mode -> 0(disable) || 1(enable) für enable, disable
@@ -867,6 +871,8 @@ class Detector:
         rm = ResponseMessage(obj_id=SERVICE_MODE, data=self.write_and_read(head_set_transparent_mode))
         if rm.is_valid():
             self.transparent_mode = int(rm.parse_data()[0])
+        else:
+            raise TypeError("no data - _set_transparent_mode()")
 
     def set_smarttec_config_variant(self, variant: int):
         # variant -> val = 0-2 (0= Basic, 1 = OEM, 2 = Advanced)
@@ -874,6 +880,8 @@ class Detector:
             self.smarttec_config_variant = variant
             self._set_smarttec_config()
             return self.smarttec_config_variant
+        else:
+            raise ValueError("variant < 0 or variant > 2")
 
     def set_smarttec_config_no_mem_compatible(self, no_mem_com: int):
         # no_mem_com -> val = 0 || 1 (0 = false = no EEPROM, 1 = true = EEPROM)
@@ -895,7 +903,11 @@ class Detector:
         container1 = SetMessage(obj_id=SET_SMARTTEC_CONFIG, data=container2, dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=SMARTTEC_CONFIG, data=self.write_and_read(container1))
-        self.set_smarttec_config_variant, self.smarttec_config_no_mem_compatible = rm.parse_data()[0]
+
+        if rm.is_valid():
+            self.set_smarttec_config_variant, self.smarttec_config_no_mem_compatible = rm.parse_data()[0]
+        else:
+            raise TypeError("no data - _set_smarttec_config()")
 
     def set_smarttec_mod_no_mem_iden_type(self, iden_type: int):
         # type -> types of memory 0-3 (0 = None, 1 = NoMem, 2 = Wire, 3 = SIMPDC)
@@ -1057,12 +1069,16 @@ class Detector:
         container1 = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_IDEN, data=container2, dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(container1))
-        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
-            self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, \
-            self.module_iden_prod_date, self.module_iden_det_tec_type, self.module_iden_th_type, \
-            self.module_iden_tec_param1, self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4, \
-            self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3, self.module_iden_th_param4, \
-            self.module_iden_cool_time = rm.parse_data()
+
+        if rm.is_valid():
+            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+                self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, \
+                self.module_iden_prod_date, self.module_iden_det_tec_type, self.module_iden_th_type, \
+                self.module_iden_tec_param1, self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4, \
+                self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3, self.module_iden_th_param4, \
+                self.module_iden_cool_time = rm.parse_data()
+        else:
+            raise TypeError("no data - _set_smarttec_mod_no_mem_iden()")
 
     def set_smarttec_mod_no_mem_default_module_iden_type1(self, type1: int):
         self.smarttec_mod_no_mem_default_module_iden_type1 = type1
@@ -1141,9 +1157,12 @@ class Detector:
         container1 = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_IDEN, data=container2, dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(container1))
-        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - _set_smarttec_mod_no_mem_default()")
 
     def set_smarttec_mod_no_mem_user_set_module_iden_type1(self, type1: int):
         self.smarttec_mod_no_mem_user_set_module_iden_type1 = type1
@@ -1222,9 +1241,13 @@ class Detector:
         container1 = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_USER_SET, data=container2, dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(container1))
-        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - _set_smarttec_mod_no_mem_user_set")
 
     def set_smarttec_mod_no_mem_user_min_module_iden_type1(self, type1: int):
         self.smarttec_mod_no_mem_user_min_module_iden_type1 = type1
@@ -1303,9 +1326,13 @@ class Detector:
         container1 = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_USER_MIN, data=container2, dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(container1))
-        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - _set_smarttec_mod_no_mem_user_min()")
 
     def set_smarttec_mod_no_mem_user_max_module_iden_type1(self, type1: int):
         self.smarttec_mod_no_mem_user_max_module_iden_type1 = type1
@@ -1384,9 +1411,13 @@ class Detector:
         container1 = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_USER_MAX, data=container2, dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(container1))
-        self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-            self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-            self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - _set_smarttec_mod_no_mem_user_max()")
 
     def set_module_iden_type(self, mtype: int):
         self.module_iden_type = mtype
@@ -1523,11 +1554,14 @@ class Detector:
 
         rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
 
-        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
-            self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, self.module_iden_prod_date, \
-            self.module_iden_tec_type, self.module_iden_th_type, self.module_iden_tec_param1, self.module_iden_tec_param2, \
-            self.module_iden_tec_param3, self.module_iden_tec_param4, self.module_iden_th_param1, self.module_iden_th_param2, \
-            self.module_iden_th_param3, self.module_iden_th_param4, self.module_iden_cool_time = rm.parse_data()
+        if rm.is_valid():
+            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+                self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, self.module_iden_prod_date, \
+                self.module_iden_tec_type, self.module_iden_th_type, self.module_iden_tec_param1, self.module_iden_tec_param2, \
+                self.module_iden_tec_param3, self.module_iden_tec_param4, self.module_iden_th_param1, self.module_iden_th_param2, \
+                self.module_iden_th_param3, self.module_iden_th_param4, self.module_iden_cool_time = rm.parse_data()
+        else:
+            raise TypeError("no data - _set_module_iden()")
 
     def set_module_default(self):
         # packages:
@@ -1550,8 +1584,11 @@ class Detector:
 
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(head_set_smarttec_mod_no_mem_iden))
 
-        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
-            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name = rm.parse_data()
+        if rm.is_valid():
+            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+                self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name = rm.parse_data()
+        else:
+            raise TypeError("no data - set_module_default()")
 
     def set_module_user_set(self):
         # packages:
@@ -1574,8 +1611,11 @@ class Detector:
 
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(head_set_smarttec_mod_no_mem_iden))
 
-        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
-            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name = rm.parse_data()
+        if rm.is_valid():
+            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+                self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name = rm.parse_data()
+        else:
+            raise TypeError("no data - set_module_user_set()")
 
     def set_module_user_min(self):
         # packages:
@@ -1598,8 +1638,11 @@ class Detector:
 
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(head_set_smarttec_mod_no_mem_iden))
 
-        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
-            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name = rm.parse_data()
+        if rm.is_valid():
+            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+                self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name = rm.parse_data()
+        else:
+            raise TypeError("no data - set_module_user_min()")
 
     def set_module_user_max(self):
         # packages:
@@ -1622,8 +1665,11 @@ class Detector:
 
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(head_set_smarttec_mod_no_mem_iden))
 
-        self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
-            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name = rm.parse_data()
+        if rm.is_valid():
+            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+                self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name = rm.parse_data()
+        else:
+            raise TypeError("no data - set_module_user_max()")
 
     def set_module_smipdc_default(self):
         # packages:
@@ -1646,9 +1692,12 @@ class Detector:
 
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
 
-        self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
-            self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
-            self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        if rm.is_valid():
+            self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+                self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+                self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        else:
+            raise TypeError("no data - set_module_smipdc_default()")
 
     def set_module_smipdc_user_set(self):
         # packages:
@@ -1671,9 +1720,12 @@ class Detector:
 
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
 
-        self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
-            self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
-            self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        if rm.is_valid():
+            self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+                self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+                self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        else:
+            raise TypeError("no data - set_module_smipdc_user_set()")
 
     def set_module_smipdc_user_min(self):
         # packages:
@@ -1696,9 +1748,12 @@ class Detector:
 
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
 
-        self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
-            self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
-            self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        if rm.is_valid():
+            self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+                self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+                self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        else:
+            raise TypeError("no data - set_module_smipdc_user_min()")
 
     def set_module_smipdc_user_max(self):
         # packages:
@@ -1721,9 +1776,12 @@ class Detector:
 
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
 
-        self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
-            self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
-            self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        if rm.is_valid():
+            self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+                self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+                self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        else:
+            raise TypeError("no data - set_module_smipdc_user_max()")
 
 
 if __name__ == '__main__':
