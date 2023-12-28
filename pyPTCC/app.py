@@ -168,8 +168,6 @@ class TemplateMessage:
         # basic data - only 1 package
         self.data = '' if data is None else data
 
-
-
         self.dlen = self.get_dlen()
 
         crc_16 = Configuration(
@@ -625,6 +623,8 @@ class Detector:
         if rm.is_valid():
             self.service_mode = rm.parse_data()[0]
             return self.service_mode
+        else:
+            raise TypeError("no data - get_service_mode()")
 
     def get_device_iden(self):
         obj = QueryMessage(obj_id=GET_DEVICE_IDEN)
@@ -633,6 +633,8 @@ class Detector:
         if rm.is_valid():
             self.device_iden_type, self.device_iden_firm_ver, self.device_iden_hard_ver, self.device_iden_name, \
                 self.device_iden_serial, self.device_iden_prod_date = rm.parse_data()
+        else:
+            raise TypeError("no data - get_device_iden()")
 
     def get_smarttec_config(self):
         obj = QueryMessage(obj_id=GET_SMARTTEC_CONFIG)
@@ -640,6 +642,8 @@ class Detector:
 
         if rm.is_valid():
             self.smarttec_config_variant, self.smarttec_config_no_mem_compatible = rm.parse_data()
+        else:
+            raise TypeError("no data - get_smarttec_config()")
 
     def get_smarttec_monitor(self):
         obj = QueryMessage(obj_id=GET_SMARTTEC_MONITOR)
@@ -651,6 +655,8 @@ class Detector:
                 self.smarttec_monitor_u_tec, self.smarttec_monitor_u_sup_plus, self.smarttec_monitor_u_sup_minus, \
                 self.smarttec_monitor_t_det, self.smarttec_monitor_t_int, self.smarttec_monitor_pwm, \
                 self.smarttec_monitor_status, self.smarttec_monitor_module_type = rm.parse_data()
+        else:
+            raise TypeError("no data - get_smarttec_monitor()")
 
     def get_smarttec_mod_no_mem_iden(self):
         obj = QueryMessage(obj_id=GET_SMARTTEC_MOD_NO_MEM_IDEN)
@@ -663,6 +669,8 @@ class Detector:
                 self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4, \
                 self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3, \
                 self.module_iden_th_param4, self.module_iden_cool_time = rm.parse_data()
+        else:
+            raise TypeError("no data - get_smarttec_mod_no_mem_iden()")
 
     def get_smarttec_mod_no_mem_default(self):
         obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
@@ -672,6 +680,8 @@ class Detector:
             self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
                 self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
                 self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - get_smarttec_mod_no_mem_default()")
 
     def get_smarttec_mod_no_mem_user_set(self):
         obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
@@ -681,6 +691,8 @@ class Detector:
             self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
                 self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
                 self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - get_smarttec_mod_no_mem_user_set()")
 
     def get_smarttec_mod_no_mem_user_min(self):
         obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
@@ -690,6 +702,8 @@ class Detector:
             self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
                 self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
                 self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - get_smarttec_mod_no_mem_user_min()")
 
     def get_smarttec_mod_no_mem_user_max(self):
         obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
@@ -699,6 +713,8 @@ class Detector:
             self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
                 self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
                 self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - get_smarttec_mod_no_mem_user_max()")
 
     def get_module_iden(self):
         obj = QueryMessage(obj_id=GET_MODULE_IDEN)
@@ -712,6 +728,8 @@ class Detector:
                 self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4, \
                 self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3, \
                 self.module_iden_th_param4, self.module_iden_cool_time = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_iden()")
 
     def get_module_default(self):
         obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
@@ -721,6 +739,8 @@ class Detector:
             self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
                 self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
                 self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_default()")
 
     def get_module_user_set(self):
         obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
@@ -730,6 +750,8 @@ class Detector:
             self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
                 self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
                 self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_user_set()")
 
     def get_module_user_min(self):
         obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
@@ -739,6 +761,8 @@ class Detector:
             self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
                 self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
                 self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_user_min()")
 
     def get_module_user_max(self):
         obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
@@ -748,6 +772,8 @@ class Detector:
             self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
                 self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
                 self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_user_max()")
 
     def get_module_smipdc_monitor(self):
         obj = QueryMessage(obj_id=MODULE_SMIPDC_MONITOR)
@@ -758,6 +784,8 @@ class Detector:
                 self.module_smipdc_monitor_tec_plus, self.module_smipdc_monitor_tec_minus, self.module_smipdc_monitor_th1, \
                 self.module_smipdc_monitor_th2, self.module_smipdc_monitor_u_det, self.module_smipdc_monitor_u_1st, \
                 self.module_smipdc_monitor_u_out, self.module_smipdc_monitor_temp = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_smipdc_monitor()")
 
     def get_module_smipdc_default(self):
         obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_DEFAULT)
@@ -768,7 +796,7 @@ class Detector:
                 self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
                 self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
         else:
-            raise ValueError('Response not Valid!')
+            raise TypeError("no data - get_module_smipdc_default()")
 
     def get_module_smipdc_user_set(self):
         obj = QueryMessage(obj_id=MODULE_SMIPDC_PARAMS)
@@ -778,6 +806,8 @@ class Detector:
             self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
                 self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
                 self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_smipdc_user_set()")
 
     def get_module_smipdc_user_min(self):
         obj = QueryMessage(obj_id=MODULE_SMIPDC_PARAMS)
@@ -787,6 +817,8 @@ class Detector:
             self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
                 self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
                 self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_smipdc_user_min()")
 
     def get_module_smipdc_user_max(self):
         obj = QueryMessage(obj_id=MODULE_SMIPDC_PARAMS)
@@ -796,6 +828,10 @@ class Detector:
             self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
                 self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
                 self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_smipdc_user_max()")
+
+    #-----------------SETTER--------------------------------------------------------------------------------------------
 
     def set_service_mode(self, mode: int):
         self.service_mode = mode
