@@ -145,13 +145,13 @@ MODULE_IDEN_SMIPDC_DEFAULT = 12288
 
 # module_smipdc_user_set/min/max
 MODULE_SMIPDC_PARAMS_DET_U_SET = 12309  # 0x3015
-MODULE_SMIPDC_PARAMS_DET_I_SET = 12325  # 0x3025
-MODULE_SMIPDC_PARAMS_GAIN_SET = 12341  # 0x3035
-MODULE_SMIPDC_PARAMS_OFFSET_SET = 12357  # 0x3045
-MODULE_SMIPDC_PARAMS_VARACTOR_SET = 12373  # 0x3055
-MODULE_SMIPDC_PARAMS_TRANS_SET = 12387  # 0x3063
-MODULE_SMIPDC_PARAMS_ACDC_SET = 12403  # 0x3073
-MODULE_SMIPDC_PARAMS_BW_SET = 12419  # 0x3083
+MODULE_SMIPDC_PARAMS_DET_I = 12325  # 0x3025
+MODULE_SMIPDC_PARAMS_GAIN = 12341  # 0x3035
+MODULE_SMIPDC_PARAMS_OFFSET = 12357  # 0x3045
+MODULE_SMIPDC_PARAMS_VARACTOR = 12373  # 0x3055
+MODULE_SMIPDC_PARAMS_TRANS = 12387  # 0x3063
+MODULE_SMIPDC_PARAMS_ACDC = 12403  # 0x3073
+MODULE_SMIPDC_PARAMS_BW = 12419  # 0x3083
 
 
 class TemplateMessage:
@@ -181,7 +181,7 @@ class TemplateMessage:
 
         self.crc_calculator = Calculator(crc_16)
 
-    def get_field_data(self,  **kwargs) -> str:
+    def get_field_data(self, **kwargs) -> str:
         data = self.int_to_bytes(self.obj_id) + self.int_to_bytes(self.dlen) + self.data
         return data + self.get_crc(data)
 
@@ -261,7 +261,7 @@ class SetMessage(TemplateMessage):
     def get_dlen(self):
         len_dtype = 0
         if self.dtype == DTYPE_CONTAINER:
-            #len_dtype = 4 + self.data.dlen
+            # len_dtype = 4 + self.data.dlen
             len_dtype = 4 + len(self.data)
         elif self.dtype == DTYPE_CSTR:
 
@@ -370,7 +370,6 @@ class ResponseMessage(TemplateMessage):
                 data.append(d)
             elif dtype == DTYPE_CSTR:
                 data.append(str(d))
-
 
             # data.append(container[dlen_stop:dlen_stop + tmp * 2 - 8])
 
@@ -821,6 +820,7 @@ class Detector:
             raise TypeError("no data - get_module_smipdc_default()")
 
     def get_module_smipdc_user_set(self):
+        """  command is used to read configurations from module SMIPDC """
         obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_USER_SET)
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
 
@@ -832,6 +832,7 @@ class Detector:
             raise TypeError("no data - get_module_smipdc_user_set()")
 
     def get_module_smipdc_user_min(self):
+        """ command is used to read minimum settings from module SMIPDC """
         obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_USER_MIN)
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
 
@@ -843,6 +844,7 @@ class Detector:
             raise TypeError("no data - get_module_smipdc_user_min()")
 
     def get_module_smipdc_user_max(self):
+        """ command is used to read maximum settings from module SMIPDC """
         obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_USER_MAX)
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
 
@@ -853,14 +855,16 @@ class Detector:
         else:
             raise TypeError("no data - get_module_smipdc_user_max()")
 
-    #-----------------SETTER--------------------------------------------------------------------------------------------
+    # -----------------SETTER--------------------------------------------------------------------------------------------
 
     def set_service_mode(self, mode: int):
+        """ command is used to set service mode. """
         self.service_mode = mode
         self._set_service_mode()
         return self.service_mode
 
     def _set_service_mode(self):
+        """ command is used to set service mode. """
         service_mode = SetMessage(obj_id=SERVICE_MODE_ENABLE, data=self.service_mode, dtype=DTYPE_BOOL)
         head_service_mode = SetMessage(obj_id=SERVICE_MODE, data=service_mode, dtype=DTYPE_CONTAINER)
         head_set_service_mode = SetMessage(obj_id=SET_SERVICE_MODE, data=head_service_mode, dtype=DTYPE_CONTAINER)
@@ -877,13 +881,14 @@ class Detector:
             raise TypeError("no data - _set_service_mode()")
 
     def set_transparent_mode(self, mode: int):
+        """ command is used to set transparent mode. """
         # mode -> 0(disable) || 1(enable) für enable, disable
         self.transparent_mode = mode
         self._set_transparent_mode()
         return self.transparent_mode
 
     def _set_transparent_mode(self):
-        # packages
+        """ command is used to set transparent mode. """
         transparent_mode = SetMessage(obj_id=TRANSPARENT_MODE_ENABLE, data=self.transparent_mode, dtype=DTYPE_BOOL)
         head_transparent_mode = SetMessage(obj_id=TRANSPARENT_MODE, data=transparent_mode, dtype=DTYPE_CONTAINER)
         head_set_transparent_mode = SetMessage(obj_id=SET_TRANSPARENT_MODE, data=head_transparent_mode,
@@ -896,6 +901,7 @@ class Detector:
             raise TypeError("no data - _set_transparent_mode()")
 
     def set_smarttec_config_variant(self, variant: int):
+        """ command is used to set configuration of SMARTEC type (Basic/OEM/Adavanced) and memory compatiblety. """
         # variant -> val = 0-2 (0= Basic, 1 = OEM, 2 = Advanced)
         if 0 >= variant <= 2:
             self.smarttec_config_variant = variant
@@ -905,13 +911,14 @@ class Detector:
             raise ValueError("variant < 0 or variant > 2")
 
     def set_smarttec_config_no_mem_compatible(self, no_mem_com: int):
+        """ command is used to set configuration of SMARTEC type (Basic/OEM/Adavanced) and memory compatiblety. """
         # no_mem_com -> val = 0 || 1 (0 = false = no EEPROM, 1 = true = EEPROM)
         self.smarttec_config_no_mem_compatible = no_mem_com
         self._set_smarttec_config()
         return self.smarttec_config_no_mem_compatible
 
     def _set_smarttec_config(self):
-        # packages
+        """ command is used to set configuration of SMARTEC type (Basic/OEM/Adavanced) and memory compatiblety. """
         smarttec_config_variant = SetMessage(obj_id=SMARTTEC_CONFIG_VARIANT, data=self.smarttec_config_variant,
                                              dtype=DTYPE_UINT8)
         smarttec_config_no_mem_com = SetMessage(obj_id=SMARTTEC_CONFIG_NO_MEM_COMPATIBLE,
@@ -931,112 +938,132 @@ class Detector:
             raise TypeError("no data - _set_smarttec_config()")
 
     def set_smarttec_mod_no_mem_iden_type(self, iden_type: int):
+        """ command is used to set data in no memory IR module (NOMEM) """
         # type -> types of memory 0-3 (0 = None, 1 = NoMem, 2 = Wire, 3 = SIMPDC)
         self.module_iden_type = iden_type
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_type
 
     def set_smarttec_mod_no_mem_iden_firm_ver(self, firm_ver: int):
+        """ command is used to set data in no memory IR module (NOMEM) """
         # version of firmware
         self.module_iden_firm_ver = firm_ver
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_firm_ver
 
     def set_smarttec_mod_no_mem_iden_hard_ver(self, hard_ver: int):
+        """ command is used to set data in no memory IR module (NOMEM) """
         # version of hardware
         self.module_iden_hard_ver = hard_ver
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_hard_ver
 
     def set_smarttec_mod_no_mem_iden_name(self, name: str):
+        """ command is used to set data in no memory IR module (NOMEM) """
         # module name
         self.module_iden_name = name
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_name
 
     def set_smarttec_mod_no_mem_iden_serial(self, iden_serial: DTYPE_SERIAL):
+        """ command is used to set data in no memory IR module (NOMEM) """
         # module serial number
         self.module_iden_serial = iden_serial
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_serial
 
     def set_smarttec_mod_no_mem_iden_det_name(self, det_name: str):
+        """ command is used to set data in no memory IR module (NOMEM) """
         # detector name
         self.module_iden_det_name = det_name
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_det_name
 
     def set_smarttec_mod_no_mem_iden_det_serial(self, det_serial: DTYPE_SERIAL):
+        """ command is used to set data in no memory IR module (NOMEM) """
         # detector serial number
         self.module_iden_det_serial = det_serial
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_det_serial
 
     def set_smarttec_mod_no_mem_iden_prod_date(self, prod_date: DTYPE_DATE_TIME):
+        """ command is used to set data in no memory IR module (NOMEM) """
         # date of manufacture of module
         self.module_iden_prod_date = prod_date
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_prod_date
 
     def set_smarttec_mod_no_mem_iden_tec_type(self, tec_type: int):
+        """ command is used to set data in no memory IR module (NOMEM) """
         # var range 0-3 (0 = None, 1 = No_mem, 2 = Wire, 3 = SIMPDC)
         self.module_iden_tec_type = tec_type
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_tec_type
 
     def set_smarttec_mod_no_mem_iden_th_type(self, th_type: int):
+        """ command is used to set data in no memory IR module (NOMEM) """
         # describes thermistor type
         self.module_iden_th_type = th_type
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_th_type
 
     def set_smarttec_mod_no_mem_iden_tec_param1(self, param1: float):
+        """ command is used to set data in no memory IR module (NOMEM) """
         self.module_iden_tec_param1 = param1
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_tec_param1
 
     def set_smarttec_mod_no_mem_iden_tec_param2(self, param2: float):
+        """ command is used to set data in no memory IR module (NOMEM) """
         self.module_iden_tec_param2 = param2
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_tec_param2
 
     def set_smarttec_mod_no_mem_iden_tec_param3(self, param3: float):
+        """ command is used to set data in no memory IR module (NOMEM) """
         self.module_iden_tec_param3 = param3
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_tec_param3
 
     def set_smarttec_mod_no_mem_iden_tec_param4(self, param4: float):
+        """ command is used to set data in no memory IR module (NOMEM) """
         self.module_iden_tec_param4 = param4
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_tec_param4
 
     def set_smarttec_mod_no_mem_iden_th_param1(self, th_param1: float):
+        """ command is used to set data in no memory IR module (NOMEM) """
         self.module_iden_th_param1 = th_param1
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_th_param1
 
     def set_smarttec_mod_no_mem_iden_th_param2(self, th_param2: float):
+        """ command is used to set data in no memory IR module (NOMEM) """
         self.module_iden_th_param2 = th_param2
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_th_param2
 
     def set_smarttec_mod_no_mem_iden_th_param3(self, th_param3: float):
+        """ command is used to set data in no memory IR module (NOMEM) """
         self.module_iden_th_param3 = th_param3
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_th_param3
 
     def set_smarttec_mod_no_mem_iden_th_param4(self, th_param4: float):
+        """ command is used to set data in no memory IR module (NOMEM) """
         self.module_iden_th_param4 = th_param4
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_th_param4
 
     def set_smarttec_mod_no_mem_iden_cool_time(self, time: int):
+        """ command is used to set data in no memory IR module (NOMEM) """
         # setting max time for cooling module
         self.module_iden_cool_time = time
         self._set_smarttec_mod_no_mem_iden()
         return self.module_iden_cool_time
 
     def _set_smarttec_mod_no_mem_iden(self):
+        """ command is used to set data in no memory IR module (NOMEM) """
         # packages
         iden_type = SetMessage(obj_id=MODULE_IDEN_TYPE, data=self.module_iden_type, dtype=DTYPE_UINT8)
         firm_ver = SetMessage(obj_id=MODULE_IDEN_FIRM_VER, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
@@ -1102,46 +1129,55 @@ class Detector:
             raise TypeError("no data - _set_smarttec_mod_no_mem_iden()")
 
     def set_smarttec_mod_no_mem_default_module_iden_type1(self, type1: int):
+        """ command is used to set default configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_default_module_iden_type1 = type1
         self._set_smarttec_mod_no_mem_default()
         return self.smarttec_mod_no_mem_default_module_iden_type1
 
     def set_smarttec_mod_no_mem_default_module_iden_firm_ver1(self, firm_ver1: int):
+        """ command is used to set default configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_default_module_iden_firm_ver1 = firm_ver1
         self._set_smarttec_mod_no_mem_default()
         return self.smarttec_mod_no_mem_default_module_iden_firm_ver1
 
     def set_smarttec_mod_no_mem_default_module_iden_hard_ver1(self, hard_ver1: int):
+        """ command is used to set default configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_default_module_iden_hard_ver1 = hard_ver1
         self._set_smarttec_mod_no_mem_default()
         return self.smarttec_mod_no_mem_default_module_iden_hard_ver1
 
     def set_smarttec_mod_no_mem_default_module_iden_name1(self, name1: str):
+        """ command is used to set default configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_default_module_iden_name1 = name1
         self._set_smarttec_mod_no_mem_default()
         return self.smarttec_mod_no_mem_default_module_iden_name1
 
     def set_smarttec_mod_no_mem_default_module_iden_type2(self, type2: int):
+        """ command is used to set default configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_default_module_iden_type2 = type2
         self._set_smarttec_mod_no_mem_default()
         return self.smarttec_mod_no_mem_default_module_iden_type2
 
     def set_smarttec_mod_no_mem_default_module_iden_firm_ver2(self, firm_ver2: int):
+        """ command is used to set default configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_default_module_iden_firm_ver2 = firm_ver2
         self._set_smarttec_mod_no_mem_default()
         return self.smarttec_mod_no_mem_default_module_iden_firm_ver2
 
     def set_smarttec_mod_no_mem_default_module_iden_hard_ver2(self, hard_ver2: int):
+        """ command is used to set default configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_default_module_iden_hard_ver2 = hard_ver2
         self._set_smarttec_mod_no_mem_default()
         return self.smarttec_mod_no_mem_default_module_iden_hard_ver2
 
     def set_smarttec_mod_no_mem_default_module_iden_name2(self, name2: str):
+        """ command is used to set default configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_default_module_iden_name2 = name2
         self._set_smarttec_mod_no_mem_default()
         return self.smarttec_mod_no_mem_default_module_iden_name2
 
     def _set_smarttec_mod_no_mem_default(self):
+        """ command is used to set default configuration in no memory IR module (NOMEM) """
         # packages:
         type1 = SetMessage(obj_id=MODULE_IDEN_TYPE,
                            data=self.smarttec_mod_no_mem_default_module_iden_type1, dtype=DTYPE_UINT8)
@@ -1186,67 +1222,76 @@ class Detector:
             raise TypeError("no data - _set_smarttec_mod_no_mem_default()")
 
     def set_smarttec_mod_no_mem_user_set_module_iden_type1(self, type1: int):
+        """ command is used to set user configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_set_module_iden_type1 = type1
         self._set_smarttec_mod_no_mem_user_set()
         return self.smarttec_mod_no_mem_user_set_module_iden_type1
 
     def set_smarttec_mod_no_mem_user_set_module_iden_firm_ver1(self, firm_ver1: int):
+        """ command is used to set user configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_set_module_iden_firm_ver1 = firm_ver1
         self._set_smarttec_mod_no_mem_user_set()
         return self.smarttec_mod_no_mem_user_set_module_iden_firm_ver1
 
     def set_smarttec_mod_no_mem_user_set_module_iden_hard_ver1(self, hard_ver1: int):
+        """ command is used to set user configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_set_module_iden_hard_ver1 = hard_ver1
         self._set_smarttec_mod_no_mem_user_set()
         return self.smarttec_mod_no_mem_user_set_module_iden_hard_ver1
 
     def set_smarttec_mod_no_mem_user_set_module_iden_name1(self, name1: str):
+        """ command is used to set user configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_set_module_iden_name1 = name1
         self._set_smarttec_mod_no_mem_user_set()
         return self.smarttec_mod_no_mem_user_set_module_iden_name1
 
     def set_smarttec_mod_no_mem_user_set_module_iden_type2(self, type2: int):
+        """ command is used to set user configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_set_module_iden_type2 = type2
         self._set_smarttec_mod_no_mem_user_set()
         return self.smarttec_mod_no_mem_user_set_module_iden_type2
 
     def set_smarttec_mod_no_mem_user_set_module_iden_firm_ver2(self, firm_ver2: int):
+        """ command is used to set user configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_set_module_iden_firm_ver2 = firm_ver2
         self._set_smarttec_mod_no_mem_user_set()
         return self.smarttec_mod_no_mem_user_set_module_iden_firm_ver2
 
     def set_smarttec_mod_no_mem_user_set_module_iden_hard_ver2(self, hard_ver2: int):
+        """ command is used to set user configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_set_module_iden_hard_ver2 = hard_ver2
         self._set_smarttec_mod_no_mem_user_set()
         return self.smarttec_mod_no_mem_user_set_module_iden_hard_ver2
 
     def set_smarttec_mod_no_mem_user_set_module_iden_name2(self, name2: str):
+        """ command is used to set user configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_set_module_iden_name2 = name2
         self._set_smarttec_mod_no_mem_user_set()
         return self.smarttec_mod_no_mem_user_set_module_iden_name2
 
     def _set_smarttec_mod_no_mem_user_set(self):
+        """ command is used to set user configuration in no memory IR module (NOMEM) """
         # packages
-        type1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_TYPE_1,
+        type1 = SetMessage(obj_id=MODULE_IDEN_TYPE,
                            data=self.smarttec_mod_no_mem_user_set_module_iden_type1, dtype=DTYPE_UINT8)
-        firm_ver1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_1,
+        firm_ver1 = SetMessage(obj_id=MODULE_IDEN_FIRM_VER,
                                data=self.smarttec_mod_no_mem_user_set_module_iden_firm_ver1, dtype=DTYPE_UINT16)
-        hard_ver1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_1,
+        hard_ver1 = SetMessage(obj_id=MODULE_IDEN_HARD_VER,
                                data=self.smarttec_mod_no_mem_user_set_module_iden_hard_ver1, dtype=DTYPE_UINT16)
-        name1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_NAME_1,
+        name1 = SetMessage(obj_id=MODULE_IDEN_NAME,
                            data=self.smarttec_mod_no_mem_user_set_module_iden_name1, dtype=DTYPE_CSTR)
 
-        type2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_TYPE_2,
+        type2 = SetMessage(obj_id=MODULE_IDEN_TYPE,
                            data=self.smarttec_mod_no_mem_user_set_module_iden_type2, dtype=DTYPE_UINT8)
-        firm_ver2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_2,
+        firm_ver2 = SetMessage(obj_id=MODULE_IDEN_FIRM_VER,
                                data=self.smarttec_mod_no_mem_user_set_module_iden_firm_ver2, dtype=DTYPE_UINT16)
-        hard_ver2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_2,
+        hard_ver2 = SetMessage(obj_id=MODULE_IDEN_HARD_VER,
                                data=self.smarttec_mod_no_mem_user_set_module_iden_hard_ver2, dtype=DTYPE_UINT16)
-        name2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_NAME_2,
+        name2 = SetMessage(obj_id=MODULE_IDEN_NAME,
                            data=self.smarttec_mod_no_mem_user_set_module_iden_name2, dtype=DTYPE_CSTR)
 
         container2 = SetMessage(
-            obj_id=NO_MEM_DEFAULT_MODULE_IDEN,
+            obj_id=MODULE_IDEN,
             dtype=DTYPE_CONTAINER,
             data=(type1,
                   firm_ver1,
@@ -1271,67 +1316,76 @@ class Detector:
             raise TypeError("no data - _set_smarttec_mod_no_mem_user_set")
 
     def set_smarttec_mod_no_mem_user_min_module_iden_type1(self, type1: int):
+        """ command is used to set user lower limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_min_module_iden_type1 = type1
         self._set_smarttec_mod_no_mem_user_min()
         return self.smarttec_mod_no_mem_user_min_module_iden_type1
 
     def set_smarttec_mod_no_mem_user_min_module_iden_firm_ver1(self, firm_ver1: int):
+        """ command is used to set user lower limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_min_module_iden_firm_ver1 = firm_ver1
         self._set_smarttec_mod_no_mem_user_min()
         return self.smarttec_mod_no_mem_user_min_module_iden_firm_ver1
 
     def set_smarttec_mod_no_mem_user_min_module_iden_hard_ver1(self, hard_ver1: int):
+        """ command is used to set user lower limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_min_module_iden_hard_ver1 = hard_ver1
         self._set_smarttec_mod_no_mem_user_min()
         return self.smarttec_mod_no_mem_user_min_module_iden_hard_ver1
 
     def set_smarttec_mod_no_mem_user_min_module_iden_name1(self, name1: str):
+        """ command is used to set user lower limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_min_module_iden_name1 = name1
         self._set_smarttec_mod_no_mem_user_min()
         return self.smarttec_mod_no_mem_user_min_module_iden_name1
 
     def set_smarttec_mod_no_mem_user_min_module_iden_type2(self, type2: int):
+        """ command is used to set user lower limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_min_module_iden_type2 = type2
         self._set_smarttec_mod_no_mem_user_min()
         return self.smarttec_mod_no_mem_user_min_module_iden_type2
 
     def set_smarttec_mod_no_mem_user_min_module_iden_firm_ver2(self, firm_ver2: int):
+        """ command is used to set user lower limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_min_module_iden_firm_ver2 = firm_ver2
         self._set_smarttec_mod_no_mem_user_min()
         return self.smarttec_mod_no_mem_user_min_module_iden_firm_ver2
 
     def set_smarttec_mod_no_mem_user_min_module_iden_hard_ver2(self, hard_ver2: int):
+        """ command is used to set user lower limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_min_module_iden_hard_ver2 = hard_ver2
         self._set_smarttec_mod_no_mem_user_min()
         return self.smarttec_mod_no_mem_user_min_module_iden_hard_ver2
 
     def set_smarttec_mod_no_mem_user_min_module_iden_name2(self, name2: str):
+        """ command is used to set user lower limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_min_module_iden_name2 = name2
         self._set_smarttec_mod_no_mem_user_min()
         return self.smarttec_mod_no_mem_user_min_module_iden_name2
 
     def _set_smarttec_mod_no_mem_user_min(self):
+        """ command is used to set user lower limits configuration in no memory IR module (NOMEM) """
         # packages
-        type1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_TYPE_1,
+        type1 = SetMessage(obj_id=MODULE_IDEN_TYPE,
                            data=self.smarttec_mod_no_mem_user_min_module_iden_type1, dtype=DTYPE_UINT8)
-        firm_ver1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_1,
+        firm_ver1 = SetMessage(obj_id=MODULE_IDEN_FIRM_VER,
                                data=self.smarttec_mod_no_mem_user_min_module_iden_firm_ver1, dtype=DTYPE_UINT16)
-        hard_ver1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_1,
+        hard_ver1 = SetMessage(obj_id=MODULE_IDEN_HARD_VER,
                                data=self.smarttec_mod_no_mem_user_min_module_iden_hard_ver1, dtype=DTYPE_UINT16)
-        name1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_NAME_1,
+        name1 = SetMessage(obj_id=MODULE_IDEN_NAME,
                            data=self.smarttec_mod_no_mem_user_min_module_iden_name1, dtype=DTYPE_CSTR)
 
-        type2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_TYPE_2,
+        type2 = SetMessage(obj_id=MODULE_IDEN_TYPE,
                            data=self.smarttec_mod_no_mem_user_min_module_iden_type2, dtype=DTYPE_UINT8)
-        firm_ver2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_2,
+        firm_ver2 = SetMessage(obj_id=MODULE_IDEN_FIRM_VER,
                                data=self.smarttec_mod_no_mem_user_min_module_iden_firm_ver2, dtype=DTYPE_UINT16)
-        hard_ver2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_2,
+        hard_ver2 = SetMessage(obj_id=MODULE_IDEN_HARD_VER,
                                data=self.smarttec_mod_no_mem_user_min_module_iden_hard_ver2, dtype=DTYPE_UINT16)
-        name2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_NAME_2,
+        name2 = SetMessage(obj_id=MODULE_IDEN_NAME,
                            data=self.smarttec_mod_no_mem_user_min_module_iden_name2, dtype=DTYPE_CSTR)
 
         container2 = SetMessage(
-            obj_id=NO_MEM_DEFAULT_MODULE_IDEN,
+            obj_id=MODULE_IDEN,
             dtype=DTYPE_CONTAINER,
             data=(type1,
                   firm_ver1,
@@ -1356,67 +1410,76 @@ class Detector:
             raise TypeError("no data - _set_smarttec_mod_no_mem_user_min()")
 
     def set_smarttec_mod_no_mem_user_max_module_iden_type1(self, type1: int):
+        """ command is used to set user upper limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_max_module_iden_type1 = type1
         self._set_smarttec_mod_no_mem_user_max()
         return self.smarttec_mod_no_mem_user_max_module_iden_type1
 
     def set_smarttec_mod_no_mem_user_max_module_iden_firm_ver1(self, firm_ver1: int):
+        """ command is used to set user upper limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_max_module_iden_firm_ver1 = firm_ver1
         self._set_smarttec_mod_no_mem_user_max()
         return self.smarttec_mod_no_mem_user_max_module_iden_firm_ver1
 
     def set_smarttec_mod_no_mem_user_max_module_iden_hard_ver1(self, hard_ver1: int):
+        """ command is used to set user upper limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_max_module_iden_hard_ver1 = hard_ver1
         self._set_smarttec_mod_no_mem_user_max()
         return self.smarttec_mod_no_mem_user_max_module_iden_hard_ver1
 
     def set_smarttec_mod_no_mem_user_max_module_iden_name1(self, name1: str):
+        """ command is used to set user upper limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_max_module_iden_name1 = name1
         self._set_smarttec_mod_no_mem_user_max()
         return self.smarttec_mod_no_mem_user_max_module_iden_name1
 
     def set_smarttec_mod_no_mem_user_max_module_iden_type2(self, type2: int):
+        """ command is used to set user upper limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_max_module_iden_type2 = type2
         self._set_smarttec_mod_no_mem_user_max()
         return self.smarttec_mod_no_mem_user_max_module_iden_type2
 
     def set_smarttec_mod_no_mem_user_max_module_iden_firm_ver2(self, firm_ver2: int):
+        """ command is used to set user upper limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_max_module_iden_firm_ver2 = firm_ver2
         self._set_smarttec_mod_no_mem_user_max()
         return self.smarttec_mod_no_mem_user_max_module_iden_firm_ver2
 
     def set_smarttec_mod_no_mem_user_max_module_iden_hard_ver2(self, hard_ver2: int):
+        """ command is used to set user upper limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_max_module_iden_hard_ver2 = hard_ver2
         self._set_smarttec_mod_no_mem_user_max()
         return self.smarttec_mod_no_mem_user_max_module_iden_hard_ver2
 
     def set_smarttec_mod_no_mem_user_max_module_iden_name2(self, name2: str):
+        """ command is used to set user upper limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_max_module_iden_name2 = name2
         self._set_smarttec_mod_no_mem_user_max()
         return self.smarttec_mod_no_mem_user_max_module_iden_name2
 
     def _set_smarttec_mod_no_mem_user_max(self):
+        """ command is used to set user upper limits configuration in no memory IR module (NOMEM) """
         # packages
-        type1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_TYPE_1,
+        type1 = SetMessage(obj_id=MODULE_IDEN_TYPE,
                            data=self.smarttec_mod_no_mem_user_max_module_iden_type1, dtype=DTYPE_UINT8)
-        firm_ver1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_1,
+        firm_ver1 = SetMessage(obj_id=MODULE_IDEN_FIRM_VER,
                                data=self.smarttec_mod_no_mem_user_max_module_iden_firm_ver1, dtype=DTYPE_UINT16)
-        hard_ver1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_1,
+        hard_ver1 = SetMessage(obj_id=MODULE_IDEN_HARD_VER,
                                data=self.smarttec_mod_no_mem_user_max_module_iden_hard_ver1, dtype=DTYPE_UINT16)
-        name1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_NAME_1,
+        name1 = SetMessage(obj_id=MODULE_IDEN_NAME,
                            data=self.smarttec_mod_no_mem_user_max_module_iden_name1, dtype=DTYPE_CSTR)
 
-        type2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_TYPE_2,
+        type2 = SetMessage(obj_id=MODULE_IDEN_TYPE,
                            data=self.smarttec_mod_no_mem_user_max_module_iden_type2, dtype=DTYPE_UINT8)
-        firm_ver2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_2,
+        firm_ver2 = SetMessage(obj_id=MODULE_IDEN_FIRM_VER,
                                data=self.smarttec_mod_no_mem_user_max_module_iden_firm_ver2, dtype=DTYPE_UINT16)
-        hard_ver2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_2,
+        hard_ver2 = SetMessage(obj_id=MODULE_IDEN_HARD_VER,
                                data=self.smarttec_mod_no_mem_user_max_module_iden_hard_ver2, dtype=DTYPE_UINT16)
-        name2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_NAME_2,
+        name2 = SetMessage(obj_id=MODULE_IDEN_NAME,
                            data=self.smarttec_mod_no_mem_user_max_module_iden_name2, dtype=DTYPE_CSTR)
 
         container2 = SetMessage(
-            obj_id=NO_MEM_DEFAULT_MODULE_IDEN,
+            obj_id=MODULE_IDEN,
             dtype=DTYPE_CONTAINER,
             data=(type1,
                   firm_ver1,
@@ -1441,101 +1504,121 @@ class Detector:
             raise TypeError("no data - _set_smarttec_mod_no_mem_user_max()")
 
     def set_module_iden_type(self, mtype: int):
+        """ command is used to set data configuration """
         self.module_iden_type = mtype
         self._set_module_iden()
         return self.module_iden_type
 
     def set_module_iden_firm_ver(self, firm_ver: int):
+        """ command is used to set data configuration """
         self.module_iden_firm_ver = firm_ver
         self._set_module_iden()
         return self.module_iden_firm_ver
 
     def set_module_iden_hard_ver(self, hard_ver: int):
+        """ command is used to set data configuration """
         self.module_iden_hard_ver = hard_ver
         self._set_module_iden()
         return self.module_iden_hard_ver
 
     def set_module_iden_name(self, name: str):
+        """ command is used to set data configuration """
         self.module_iden_name = name
         self._set_module_iden()
         return self.module_iden_name
 
     def set_module_iden_serial(self, mserial: DTYPE_SERIAL):
+        """ command is used to set data configuration """
         self.module_iden_serial = mserial
         self._set_module_iden()
         return self.module_iden_serial
 
     def set_module_iden_det_name(self, det_name: str):
+        """ command is used to set data configuration """
         self.module_iden_det_name = det_name
         self._set_module_iden()
         return self.module_iden_det_name
 
     def set_module_iden_det_serial(self, det_serial: DTYPE_SERIAL):
+        """ command is used to set data configuration """
         self.module_iden_det_serial = det_serial
         self._set_module_iden()
         return self.module_iden_det_serial
 
     def set_module_iden_prod_date(self, prod_date: DTYPE_DATE_TIME):
+        """ command is used to set data configuration """
         self.module_iden_prod_date = prod_date
         self._set_module_iden()
         return self.module_iden_prod_date
 
     def set_module_iden_tec_type(self, tec_type: int):
+        """ command is used to set data configuration """
         self.module_iden_tec_type = tec_type
         self._set_module_iden()
         return self.module_iden_tec_type
 
     def set_module_iden_th_type(self, th_type: int):
+        """ command is used to set data configuration """
         self.module_iden_th_type = th_type
         self._set_module_iden()
         return self.module_iden_th_type
 
     def set_module_iden_tec_param1(self, param1: float):
+        """ command is used to set data configuration """
         self.module_iden_tec_param1 = param1
         self._set_module_iden()
         return self.module_iden_tec_param1
 
     def set_module_iden_tec_param2(self, param2: float):
+        """ command is used to set data configuration """
         self.module_iden_tec_param2 = param2
         self._set_module_iden()
         return self.module_iden_tec_param2
 
     def set_module_iden_tec_param3(self, param3: float):
+        """ command is used to set data configuration """
         self.module_iden_tec_param3 = param3
         self._set_module_iden()
         return self.module_iden_tec_param3
 
     def set_module_iden_tec_param4(self, param4: float):
+        """ command is used to set data configuration """
         self.module_iden_tec_param4 = param4
         self._set_module_iden()
         return self.module_iden_tec_param4
 
     def set_module_iden_th_param1(self, param1: float):
+        """ command is used to set data configuration """
         self.module_iden_th_param1 = param1
         self._set_module_iden()
         return self.module_iden_th_param1
 
     def set_module_iden_th_param2(self, param2: float):
+        """ command is used to set data configuration """
         self.module_iden_th_param2 = param2
         self._set_module_iden()
         return self.module_iden_th_param2
 
     def set_module_iden_th_param3(self, param3: float):
+        """ command is used to set data configuration """
         self.module_iden_th_param3 = param3
         self._set_module_iden()
         return self.module_iden_th_param3
 
     def set_module_iden_th_param4(self, param4: float):
+        """ command is used to set data configuration """
         self.module_iden_th_param4 = param4
         self._set_module_iden()
         return self.module_iden_th_param4
 
     def set_module_iden_cool_time(self, cool_time: int):
+        """ command is used to set data configuration """
         self.module_iden_cool_time = cool_time
         self._set_module_iden()
         return self.module_iden_cool_time
 
     def _set_module_iden(self):
+        """ command is used to set data configuration """
         # packages
         mtype = SetMessage(obj_id=MODULE_IDEN_TYPE, data=self.module_iden_type, dtype=DTYPE_UINT8)
         firm_ver = SetMessage(obj_id=MODULE_IDEN_FIRM_VER, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
@@ -1571,9 +1654,10 @@ class Detector:
                                                            th_param3, th_param4,
                                                            cool_time), dtype=DTYPE_CONTAINER)
 
-        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_IDEN_2, data=module_iden, dtype=DTYPE_CONTAINER)
+        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_IDEN, data=module_iden,
+                                                  dtype=DTYPE_CONTAINER)
 
-        rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
 
         if rm.is_valid():
             self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
@@ -1585,23 +1669,24 @@ class Detector:
             raise TypeError("no data - _set_module_iden()")
 
     def set_module_default(self):
-        # packages:
-        i_type1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_SUP_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
-        firm_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
-        hard_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
-        name1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_iden_name, dtype=DTYPE_CSTR)
+        """ command is used to set default data configuration """
+        i_type1 = SetMessage(obj_id=MODULE_IDEN_TYPE, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver1 = SetMessage(obj_id=MODULE_IDEN_FIRM_VER, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
+        hard_ver1 = SetMessage(obj_id=MODULE_IDEN_HARD_VER, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
+        name1 = SetMessage(obj_id=MODULE_IDEN_NAME, data=self.module_iden_name, dtype=DTYPE_CSTR)
 
-        i_type2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
-        firm_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
-        hard_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
-        name2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_iden_name, dtype=DTYPE_CSTR)
+        i_type2 = SetMessage(obj_id=MODULE_IDEN_TYPE, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver2 = SetMessage(obj_id=MODULE_IDEN_FIRM_VER, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
+        hard_ver2 = SetMessage(obj_id=MODULE_IDEN_HARD_VER, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
+        name2 = SetMessage(obj_id=MODULE_IDEN_NAME, data=self.module_iden_name, dtype=DTYPE_CSTR)
 
-        head_module_iden = SetMessage(obj_id=HEAD_MODULE_IDEN, data=(i_type1, firm_ver1,
-                                                                     hard_ver1, name1,
-                                                                     i_type2, firm_ver2,
-                                                                     hard_ver2, name2), dtype=DTYPE_CONTAINER)
+        head_module_iden = SetMessage(obj_id=MODULE_IDEN, data=(i_type1, firm_ver1,
+                                                                hard_ver1, name1,
+                                                                i_type2, firm_ver2,
+                                                                hard_ver2, name2), dtype=DTYPE_CONTAINER)
 
-        head_set_smarttec_mod_no_mem_iden = SetMessage(obj_id=HEAD_SET_SMARTTEC_MOD_NO_MEM_IDEN, data=head_module_iden, dtype=DTYPE_CONTAINER)
+        head_set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_DEFAULT, data=head_module_iden,
+                                                       dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(head_set_smarttec_mod_no_mem_iden))
 
@@ -1612,23 +1697,24 @@ class Detector:
             raise TypeError("no data - set_module_default()")
 
     def set_module_user_set(self):
-        # packages:
-        i_type1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_SUP_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
-        firm_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
-        hard_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
-        name1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_iden_name, dtype=DTYPE_CSTR)
+        """ command is used to set user configuration """
+        i_type1 = SetMessage(obj_id=MODULE_IDEN_TYPE, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver1 = SetMessage(obj_id=MODULE_IDEN_FIRM_VER, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
+        hard_ver1 = SetMessage(obj_id=MODULE_IDEN_HARD_VER, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
+        name1 = SetMessage(obj_id=MODULE_IDEN_NAME, data=self.module_iden_name, dtype=DTYPE_CSTR)
 
-        i_type2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
-        firm_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
-        hard_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
-        name2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_iden_name, dtype=DTYPE_CSTR)
+        i_type2 = SetMessage(obj_id=MODULE_IDEN_TYPE, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver2 = SetMessage(obj_id=MODULE_IDEN_FIRM_VER, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
+        hard_ver2 = SetMessage(obj_id=MODULE_IDEN_HARD_VER, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
+        name2 = SetMessage(obj_id=MODULE_IDEN_NAME, data=self.module_iden_name, dtype=DTYPE_CSTR)
 
-        head_module_iden = SetMessage(obj_id=HEAD_MODULE_IDEN, data=(i_type1, firm_ver1,
-                                                                     hard_ver1, name1,
-                                                                     i_type2, firm_ver2,
-                                                                     hard_ver2, name2), dtype=DTYPE_CONTAINER)
+        head_module_iden = SetMessage(obj_id=MODULE_IDEN, data=(i_type1, firm_ver1,
+                                                                hard_ver1, name1,
+                                                                i_type2, firm_ver2,
+                                                                hard_ver2, name2), dtype=DTYPE_CONTAINER)
 
-        head_set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_USER_SET, data=head_module_iden, dtype=DTYPE_CONTAINER)
+        head_set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_USER_SET, data=head_module_iden,
+                                                       dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(head_set_smarttec_mod_no_mem_iden))
 
@@ -1639,23 +1725,26 @@ class Detector:
             raise TypeError("no data - set_module_user_set()")
 
     def set_module_user_min(self):
-        # packages:
-        i_type1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_SUP_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
-        firm_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
-        hard_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
-        name1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_iden_name, dtype=DTYPE_CSTR)
+        """ command is used to set user lower limits configuration """
+        i_type1 = SetMessage(obj_id=MODULE_IDEN_TYPE, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver1 = SetMessage(obj_id=MODULE_IDEN_FIRM_VER, data=self.module_iden_firm_ver,
+                               dtype=DTYPE_UINT16)
+        hard_ver1 = SetMessage(obj_id=MODULE_IDEN_HARD_VER, data=self.module_iden_hard_ver,
+                               dtype=DTYPE_UINT16)
+        name1 = SetMessage(obj_id=MODULE_IDEN_NAME, data=self.module_iden_name, dtype=DTYPE_CSTR)
 
-        i_type2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
-        firm_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
-        hard_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
-        name2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_iden_name, dtype=DTYPE_CSTR)
+        i_type2 = SetMessage(obj_id=MODULE_IDEN_TYPE, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver2 = SetMessage(obj_id=MODULE_IDEN_FIRM_VER, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
+        hard_ver2 = SetMessage(obj_id=MODULE_IDEN_HARD_VER, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
+        name2 = SetMessage(obj_id=MODULE_IDEN_NAME, data=self.module_iden_name, dtype=DTYPE_CSTR)
 
-        head_module_iden = SetMessage(obj_id=HEAD_MODULE_IDEN, data=(i_type1, firm_ver1,
-                                                                     hard_ver1, name1,
-                                                                     i_type2, firm_ver2,
-                                                                     hard_ver2, name2), dtype=DTYPE_CONTAINER)
+        head_module_iden = SetMessage(obj_id=MODULE_IDEN, data=(i_type1, firm_ver1,
+                                                                hard_ver1, name1,
+                                                                i_type2, firm_ver2,
+                                                                hard_ver2, name2), dtype=DTYPE_CONTAINER)
 
-        head_set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_USER_MIN, data=head_module_iden, dtype=DTYPE_CONTAINER)
+        head_set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_USER_MIN, data=head_module_iden,
+                                                       dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(head_set_smarttec_mod_no_mem_iden))
 
@@ -1666,23 +1755,26 @@ class Detector:
             raise TypeError("no data - set_module_user_min()")
 
     def set_module_user_max(self):
-        # packages:
-        i_type1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_SUP_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
-        firm_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_PLUS, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
-        hard_ver1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
-        name1 = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_iden_name, dtype=DTYPE_CSTR)
+        """ command is used to set user lower limits configuration """
+        i_type1 = SetMessage(obj_id=MODULE_IDEN_TYPE, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver1 = SetMessage(obj_id=MODULE_IDEN_FIRM_VER, data=self.module_iden_firm_ver,
+                               dtype=DTYPE_UINT16)
+        hard_ver1 = SetMessage(obj_id=MODULE_IDEN_HARD_VER, data=self.module_iden_hard_ver,
+                               dtype=DTYPE_UINT16)
+        name1 = SetMessage(obj_id=MODULE_IDEN_NAME, data=self.module_iden_name, dtype=DTYPE_CSTR)
 
-        i_type2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_iden_type, dtype=DTYPE_UINT8)
-        firm_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
-        hard_ver2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
-        name2 = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_iden_name, dtype=DTYPE_CSTR)
+        i_type2 = SetMessage(obj_id=MODULE_IDEN_TYPE, data=self.module_iden_type, dtype=DTYPE_UINT8)
+        firm_ver2 = SetMessage(obj_id=MODULE_IDEN_FIRM_VER, data=self.module_iden_firm_ver, dtype=DTYPE_UINT16)
+        hard_ver2 = SetMessage(obj_id=MODULE_IDEN_HARD_VER, data=self.module_iden_hard_ver, dtype=DTYPE_UINT16)
+        name2 = SetMessage(obj_id=MODULE_IDEN_NAME, data=self.module_iden_name, dtype=DTYPE_CSTR)
 
-        head_module_iden = SetMessage(obj_id=HEAD_MODULE_IDEN, data=(i_type1, firm_ver1,
-                                                                     hard_ver1, name1,
-                                                                     i_type2, firm_ver2,
-                                                                     hard_ver2, name2), dtype=DTYPE_CONTAINER)
+        head_module_iden = SetMessage(obj_id=MODULE_IDEN, data=(i_type1, firm_ver1,
+                                                                hard_ver1, name1,
+                                                                i_type2, firm_ver2,
+                                                                hard_ver2, name2), dtype=DTYPE_CONTAINER)
 
-        head_set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_USER_MAX, data=head_module_iden, dtype=DTYPE_CONTAINER)
+        head_set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_USER_MAX, data=head_module_iden,
+                                                       dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(head_set_smarttec_mod_no_mem_iden))
 
@@ -1693,23 +1785,27 @@ class Detector:
             raise TypeError("no data - set_module_user_max()")
 
     def set_module_smipdc_default(self):
-        # packages:
+        """ command is used to set default configuration in SMIPDC module """
         det_u = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_U, data=self.module_smipdc_params_det_u, dtype=DTYPE_UINT16)
-        det_i = SetMessage(obj_id=MODULE_BASIC_PARAMS_DET_1, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
-        gain = SetMessage(obj_id=MODULE_BASIC_PARAMS_U_SUP_MINUS, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
-        offset = SetMessage(obj_id=MODULE_BASIC_PARAMS_FAN_CTRL, data=self.module_smipdc_params_offset, dtype=DTYPE_UINT16)
+        det_i = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_I, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
+        gain = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_GAIN, data=self.module_smipdc_params_gain,
+                          dtype=DTYPE_UINT16)
+        offset = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_OFFSET, data=self.module_smipdc_params_offset,
+                            dtype=DTYPE_UINT16)
 
-        varactor = SetMessage(obj_id=MODULE_BASIC_PARAMS_TEC_CTRL, data=self.module_smipdc_params_varactor, dtype=DTYPE_UINT16)
-        trans = SetMessage(obj_id=MODULE_BASIC_PARAMS_PWM, data=self.module_smipdc_params_trans, dtype=DTYPE_UINT8)
-        acdc = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
-        bw = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
+        varactor = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_VARACTOR, data=self.module_smipdc_params_varactor,
+                              dtype=DTYPE_UINT16)
+        trans = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_TRANS, data=self.module_smipdc_params_trans, dtype=DTYPE_UINT8)
+        acdc = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_ACDC, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
+        bw = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_BW, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
 
-        module_smipdc_params = SetMessage(obj_id=MODULE_SMIPDC_PARAMS, data=(det_u, det_i,
+        module_smipdc_params = SetMessage(obj_id=MODULE_IDEN, data=(det_u, det_i,
                                                                     gain, offset,
                                                                     varactor, trans,
                                                                     acdc, bw), dtype=DTYPE_CONTAINER)
 
-        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_SMIPDC_DEFAULT, data=module_smipdc_params, dtype=DTYPE_CONTAINER)
+        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_SMIPDC_DEFAULT, data=module_smipdc_params,
+                                                  dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
 
@@ -1721,23 +1817,29 @@ class Detector:
             raise TypeError("no data - set_module_smipdc_default()")
 
     def set_module_smipdc_user_set(self):
-        # packages:
-        det_u = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_U_SET, data=self.module_smipdc_params_det_u, dtype=DTYPE_UINT16)
-        det_i = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_I_SET, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
-        gain = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_GAIN_SET, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
-        offset = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_OFFSET_SET, data=self.module_smipdc_params_offset, dtype=DTYPE_UINT16)
+        """ command is used to set user configuration in SMIPDC module """
+        det_u = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_U, data=self.module_smipdc_params_det_u,
+                           dtype=DTYPE_UINT16)
+        det_i = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_I, data=self.module_smipdc_params_det_i,
+                           dtype=DTYPE_UINT16)
+        gain = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_GAIN, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
+        offset = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_OFFSET, data=self.module_smipdc_params_offset,
+                            dtype=DTYPE_UINT16)
 
-        varactor = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_VARACTOR_SET, data=self.module_smipdc_params_varactor, dtype=DTYPE_UINT16)
-        trans = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_TRANS_SET, data=self.module_smipdc_params_trans, dtype=DTYPE_UINT8)
-        acdc = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_ACDC_SET, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
-        bw = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_BW_SET, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
+        varactor = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_VARACTOR, data=self.module_smipdc_params_varactor,
+                              dtype=DTYPE_UINT16)
+        trans = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_TRANS, data=self.module_smipdc_params_trans,
+                           dtype=DTYPE_UINT8)
+        acdc = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_ACDC, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
+        bw = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_BW, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
 
-        module_iden = SetMessage(obj_id=MODULE_SMIPDC_PARAMS, data=(det_u, det_i,
-                                                                    gain, offset,
-                                                                    varactor, trans,
-                                                                    acdc, bw), dtype=DTYPE_CONTAINER)
+        module_iden = SetMessage(obj_id=MODULE_IDEN, data=(det_u, det_i,
+                                                           gain, offset,
+                                                           varactor, trans,
+                                                           acdc, bw), dtype=DTYPE_CONTAINER)
 
-        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_SMIPDC_USER_SET, data=module_iden, dtype=DTYPE_CONTAINER)
+        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_SMIPDC_USER_SET, data=module_iden,
+                                                  dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
 
@@ -1749,23 +1851,29 @@ class Detector:
             raise TypeError("no data - set_module_smipdc_user_set()")
 
     def set_module_smipdc_user_min(self):
-        # packages:
-        det_u = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_U_SET, data=self.module_smipdc_params_det_u, dtype=DTYPE_UINT16)
-        det_i = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_I_SET, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
-        gain = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_GAIN_SET, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
-        offset = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_OFFSET_SET, data=self.module_smipdc_params_offset, dtype=DTYPE_UINT16)
+        """ command is used to set user lower limits configuration in SMIPDC module """
+        det_u = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_U, data=self.module_smipdc_params_det_u,
+                           dtype=DTYPE_UINT16)
+        det_i = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_I, data=self.module_smipdc_params_det_i,
+                           dtype=DTYPE_UINT16)
+        gain = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_GAIN, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
+        offset = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_OFFSET, data=self.module_smipdc_params_offset,
+                            dtype=DTYPE_UINT16)
 
-        varactor = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_VARACTOR_SET, data=self.module_smipdc_params_varactor, dtype=DTYPE_UINT16)
-        trans = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_TRANS_SET, data=self.module_smipdc_params_trans, dtype=DTYPE_UINT8)
-        acdc = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_ACDC_SET, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
-        bw = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_BW_SET, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
+        varactor = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_VARACTOR, data=self.module_smipdc_params_varactor,
+                              dtype=DTYPE_UINT16)
+        trans = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_TRANS, data=self.module_smipdc_params_trans,
+                           dtype=DTYPE_UINT8)
+        acdc = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_ACDC, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
+        bw = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_BW, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
 
-        module_iden = SetMessage(obj_id=MODULE_SMIPDC_PARAMS, data=(det_u, det_i,
-                                                                    gain, offset,
-                                                                    varactor, trans,
-                                                                    acdc, bw), dtype=DTYPE_CONTAINER)
+        module_iden = SetMessage(obj_id=MODULE_IDEN, data=(det_u, det_i,
+                                                           gain, offset,
+                                                           varactor, trans,
+                                                           acdc, bw), dtype=DTYPE_CONTAINER)
 
-        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_SMIPDC_USER_MIN, data=module_iden, dtype=DTYPE_CONTAINER)
+        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_SMIPDC_USER_MIN, data=module_iden,
+                                                  dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
 
@@ -1777,23 +1885,29 @@ class Detector:
             raise TypeError("no data - set_module_smipdc_user_min()")
 
     def set_module_smipdc_user_max(self):
-        # packages:
-        det_u = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_U_SET, data=self.module_smipdc_params_det_u, dtype=DTYPE_UINT16)
-        det_i = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_I_SET, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
-        gain = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_GAIN_SET, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
-        offset = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_OFFSET_SET, data=self.module_smipdc_params_offset, dtype=DTYPE_UINT16)
+        """ command is used to set user upper limits configuration in SMIPDC module """
+        det_u = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_U, data=self.module_smipdc_params_det_u,
+                           dtype=DTYPE_UINT16)
+        det_i = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_I, data=self.module_smipdc_params_det_i,
+                           dtype=DTYPE_UINT16)
+        gain = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_GAIN, data=self.module_smipdc_params_gain, dtype=DTYPE_UINT16)
+        offset = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_OFFSET, data=self.module_smipdc_params_offset,
+                            dtype=DTYPE_UINT16)
 
-        varactor = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_VARACTOR_SET, data=self.module_smipdc_params_varactor, dtype=DTYPE_UINT16)
-        trans = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_TRANS_SET, data=self.module_smipdc_params_trans, dtype=DTYPE_UINT8)
-        acdc = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_ACDC_SET, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
-        bw = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_BW_SET, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
+        varactor = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_VARACTOR, data=self.module_smipdc_params_varactor,
+                              dtype=DTYPE_UINT16)
+        trans = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_TRANS, data=self.module_smipdc_params_trans,
+                           dtype=DTYPE_UINT8)
+        acdc = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_ACDC, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
+        bw = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_BW, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
 
-        module_iden = SetMessage(obj_id=MODULE_SMIPDC_PARAMS, data=(det_u, det_i,
+        module_iden = SetMessage(obj_id=MODULE_IDEN, data=(det_u, det_i,
                                                                     gain, offset,
                                                                     varactor, trans,
                                                                     acdc, bw), dtype=DTYPE_CONTAINER)
 
-        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_SMIPDC_USER_MAX, data=module_iden, dtype=DTYPE_CONTAINER)
+        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_SMIPDC_USER_MAX, data=module_iden,
+                                                  dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
 
