@@ -38,7 +38,7 @@ GET_SMARTTEC_CONFIG = 1280
 SET_SMARTTEC_CONFIG = 1296
 GET_SMARTTEC_MONITOR = 1312
 GET_SMARTTEC_MOD_NO_MEM_IDEN = 1536
-SET_SMARTTEC_MOD_NO_MEM_IDEN = 1584  # 0x0630
+SET_SMARTTEC_MOD_NO_MEM_IDEN = 1552
 SET_SMARTTEC_MOD_NO_MEM_IDEN_2 = 1552  # 0x0610
 GET_SMARTTEC_MOD_NO_MEM_DEFAULT = 1568
 SET_SMARTTEC_MOD_NO_MEM_DEFAULT = 1584
@@ -232,9 +232,16 @@ class SetMessage(TemplateMessage):
         if isinstance(data, tuple):
             self.data = b''
             for d in data:
-                self.data += d.get_field_data()
+                tmp = d.get_field_data()
+                if isinstance(tmp, str):
+                    self.data += tmp.encode('utf-8')
+                else:
+                    self.data += tmp
+        elif isinstance(data, SetMessage):
+            self.data = data.data
         else:
-            self.data = data
+            print(type(data))
+            self.data = f'{data}'.encode('utf-8')
 
         self.dtype = dtype
 
@@ -254,11 +261,12 @@ class SetMessage(TemplateMessage):
     def get_dlen(self):
         len_dtype = 0
         if self.dtype == DTYPE_CONTAINER:
-            len_dtype = 4 + self.data.dlen
+            #len_dtype = 4 + self.data.dlen
+            len_dtype = 4 + len(self.data)
         elif self.dtype == DTYPE_CSTR:
-            # print(self.data)
+
             if self.data is not None:
-                # print(self.data)
+
                 len_dtype = 4 + len(self.data)
             else:
                 raise ValueError('data cant be None for dtype cstr')
@@ -286,8 +294,8 @@ class SetMessage(TemplateMessage):
 
     def get_field_data(self, is_container: bool = False) -> str:
         if self.dtype == DTYPE_CONTAINER:
-            self.data = self.data.get_field_data(is_container=True)
-            data = self.int_to_bytes(self.obj_id) + self.int_to_bytes(self.dlen) + self.data
+            # self.data = self.data.get_field_data(is_container=True)
+            data = self.int_to_bytes(self.obj_id) + self.int_to_bytes(self.dlen) + self.data.decode('utf-8')
         else:
             data = self.int_to_bytes(self.obj_id) + self.int_to_bytes(self.dlen) + self.int_to_bytes(int(self.data), (
                     self.dlen - 4) * 2)
@@ -317,8 +325,9 @@ class ResponseMessage(TemplateMessage):
 
         if data is None:
             data = self.data
-        # print(data)
-        dtype = int(data[1:5], base=16) & 1028
+        # dtype = int(data[1:5], base=16) & 1028
+        dtype = int(data[3:7], base=16) & 1028
+
         if dtype == DTYPE_CONTAINER:
             data = self.parse_container(self.data[9:-5])
         else:
@@ -340,7 +349,6 @@ class ResponseMessage(TemplateMessage):
             dtype = int(obj_id[-1:], base=16)
 
             d = container[dlen_stop:dlen_stop + tmp * 2 - 8]
-            # print(f'objectID: {int(obj_id, base=16)}, DTYPE: {dtype}, d: {d}')
             if dtype == DTYPE_BOOL:
                 data.append(bool(d))
             elif dtype == DTYPE_INT8 or dtype == DTYPE_INT16 or dtype == DTYPE_INT32:
@@ -361,9 +369,8 @@ class ResponseMessage(TemplateMessage):
             elif dtype == DTYPE_SERIAL:
                 data.append(d)
             elif dtype == DTYPE_CSTR:
-                # print(str(d))
                 data.append(str(d))
-                # print(str(d))
+
 
             # data.append(container[dlen_stop:dlen_stop + tmp * 2 - 8])
 
@@ -612,12 +619,12 @@ class Detector:
             raise TypeError('Obj should be a BasicObject')
 
         mes = '$' + obj.get_field_data() + '#'
-        # print(mes)
         self._serial.write(mes.encode('UTF-8'))
 
         return self._serial.readline()
 
     def get_service_mode(self):
+        """ command is used to check if service mode is enabled/disabled """
         obj = QueryMessage(obj_id=GET_SERVICE_MODE)
         rm = ResponseMessage(obj_id=SERVICE_MODE, data=self.write_and_read(obj))
 
@@ -638,6 +645,7 @@ class Detector:
             raise TypeError("no data - get_device_iden()")
 
     def get_smarttec_config(self):
+        """ command is used to read controller configurations data """
         obj = QueryMessage(obj_id=GET_SMARTTEC_CONFIG)
         rm = ResponseMessage(obj_id=SMARTTEC_CONFIG, data=self.write_and_read(obj))
 
@@ -647,6 +655,7 @@ class Detector:
             raise TypeError("no data - get_smarttec_config()")
 
     def get_smarttec_monitor(self):
+        """  command is used to read controller data configurations """
         obj = QueryMessage(obj_id=GET_SMARTTEC_MONITOR)
         rm = ResponseMessage(obj_id=SMARTTEC_MONITOR, data=self.write_and_read(obj))
 
@@ -660,6 +669,7 @@ class Detector:
             raise TypeError("no data - get_smarttec_monitor()")
 
     def get_smarttec_mod_no_mem_iden(self):
+        """ command is used to read data in no memory IR module """
         obj = QueryMessage(obj_id=GET_SMARTTEC_MOD_NO_MEM_IDEN)
         rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(obj))
 
@@ -674,7 +684,8 @@ class Detector:
             raise TypeError("no data - get_smarttec_mod_no_mem_iden()")
 
     def get_smarttec_mod_no_mem_default(self):
-        obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
+        """ command is used to read default data in no memory IR """
+        obj = QueryMessage(obj_id=GET_SMARTTEC_MOD_NO_MEM_DEFAULT)
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
 
         if rm.is_valid():
@@ -685,7 +696,8 @@ class Detector:
             raise TypeError("no data - get_smarttec_mod_no_mem_default()")
 
     def get_smarttec_mod_no_mem_user_set(self):
-        obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
+        """ command is used to read user settings in no memory module (NOMEM) """
+        obj = QueryMessage(obj_id=GET_SMARTTEC_MOD_NO_MEM_USER_SET)
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
 
         if rm.is_valid():
@@ -696,7 +708,8 @@ class Detector:
             raise TypeError("no data - get_smarttec_mod_no_mem_user_set()")
 
     def get_smarttec_mod_no_mem_user_min(self):
-        obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
+        """ command is used to read minimum settings of no memory module (NOMEM) """
+        obj = QueryMessage(obj_id=GET_SMARTTEC_MOD_NO_MEM_USER_MIN)
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
 
         if rm.is_valid():
@@ -707,7 +720,8 @@ class Detector:
             raise TypeError("no data - get_smarttec_mod_no_mem_user_min()")
 
     def get_smarttec_mod_no_mem_user_max(self):
-        obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
+        """ command is used to read maximum settings of no memory module (NOMEM) """
+        obj = QueryMessage(obj_id=GET_SMARTTEC_MOD_NO_MEM_USER_MAX)
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
 
         if rm.is_valid():
@@ -718,6 +732,7 @@ class Detector:
             raise TypeError("no data - get_smarttec_mod_no_mem_user_max()")
 
     def get_module_iden(self):
+        """ command is used to read controller configurations data from module memory """
         obj = QueryMessage(obj_id=GET_MODULE_IDEN)
 
         rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(obj))
@@ -733,7 +748,8 @@ class Detector:
             raise TypeError("no data - get_module_iden()")
 
     def get_module_default(self):
-        obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
+        """  command is used to read default configurations from module memory """
+        obj = QueryMessage(obj_id=GET_MODULE_DEFAULT)
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
 
         if rm.is_valid():
@@ -744,7 +760,8 @@ class Detector:
             raise TypeError("no data - get_module_default()")
 
     def get_module_user_set(self):
-        obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
+        """ command is used to read basic user settings from module memory """
+        obj = QueryMessage(obj_id=GET_MODULE_USER_SET)
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
 
         if rm.is_valid():
@@ -755,7 +772,8 @@ class Detector:
             raise TypeError("no data - get_module_user_set()")
 
     def get_module_user_min(self):
-        obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
+        """ command is used to read minimum basic settings from module memory """
+        obj = QueryMessage(obj_id=GET_MODULE_USER_MIN)
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
 
         if rm.is_valid():
@@ -766,7 +784,8 @@ class Detector:
             raise TypeError("no data - get_module_user_min()")
 
     def get_module_user_max(self):
-        obj = QueryMessage(obj_id=MODULE_BASIC_PARAMS)
+        """ command is used to save minimum basic settings of no memory module """
+        obj = QueryMessage(obj_id=GET_MODULE_USER_MAX)
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
 
         if rm.is_valid():
@@ -777,7 +796,8 @@ class Detector:
             raise TypeError("no data - get_module_user_max()")
 
     def get_module_smipdc_monitor(self):
-        obj = QueryMessage(obj_id=MODULE_SMIPDC_MONITOR)
+        """ command is used to read actuall controller data configurations from module SMIPDC """
+        obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_MONITOR)
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_MONITOR, data=self.write_and_read(obj))
 
         if rm.is_valid():
@@ -789,6 +809,7 @@ class Detector:
             raise TypeError("no data - get_module_smipdc_monitor()")
 
     def get_module_smipdc_default(self):
+        """ command is used to read default configurations from module SMIPDC """
         obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_DEFAULT)
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
 
@@ -800,7 +821,7 @@ class Detector:
             raise TypeError("no data - get_module_smipdc_default()")
 
     def get_module_smipdc_user_set(self):
-        obj = QueryMessage(obj_id=MODULE_SMIPDC_PARAMS)
+        obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_USER_SET)
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
 
         if rm.is_valid():
@@ -811,7 +832,7 @@ class Detector:
             raise TypeError("no data - get_module_smipdc_user_set()")
 
     def get_module_smipdc_user_min(self):
-        obj = QueryMessage(obj_id=MODULE_SMIPDC_PARAMS)
+        obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_USER_MIN)
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
 
         if rm.is_valid():
@@ -822,7 +843,7 @@ class Detector:
             raise TypeError("no data - get_module_smipdc_user_min()")
 
     def get_module_smipdc_user_max(self):
-        obj = QueryMessage(obj_id=MODULE_SMIPDC_PARAMS)
+        obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_USER_MAX)
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
 
         if rm.is_valid():
@@ -868,7 +889,7 @@ class Detector:
         head_set_transparent_mode = SetMessage(obj_id=SET_TRANSPARENT_MODE, data=head_transparent_mode,
                                                dtype=DTYPE_CONTAINER)
 
-        rm = ResponseMessage(obj_id=SERVICE_MODE, data=self.write_and_read(head_set_transparent_mode))
+        rm = ResponseMessage(obj_id=TRANSPARENT_MODE, data=self.write_and_read(head_set_transparent_mode))
         if rm.is_valid():
             self.transparent_mode = int(rm.parse_data()[0])
         else:
@@ -1122,26 +1143,26 @@ class Detector:
 
     def _set_smarttec_mod_no_mem_default(self):
         # packages:
-        type1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_TYPE_1,
+        type1 = SetMessage(obj_id=MODULE_IDEN_TYPE,
                            data=self.smarttec_mod_no_mem_default_module_iden_type1, dtype=DTYPE_UINT8)
-        firm_ver1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_1,
+        firm_ver1 = SetMessage(obj_id=MODULE_IDEN_FIRM_VER,
                                data=self.smarttec_mod_no_mem_default_module_iden_firm_ver1, dtype=DTYPE_UINT16)
-        hard_ver1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_1,
+        hard_ver1 = SetMessage(obj_id=MODULE_IDEN_HARD_VER,
                                data=self.smarttec_mod_no_mem_default_module_iden_hard_ver1, dtype=DTYPE_UINT16)
-        name1 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_NAME_1,
+        name1 = SetMessage(obj_id=MODULE_IDEN_NAME,
                            data=self.smarttec_mod_no_mem_default_module_iden_name1, dtype=DTYPE_CSTR)
 
-        type2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_TYPE_2,
+        type2 = SetMessage(obj_id=MODULE_IDEN_TYPE,
                            data=self.smarttec_mod_no_mem_default_module_iden_type2, dtype=DTYPE_UINT8)
-        firm_ver2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_FIRM_VER_2,
+        firm_ver2 = SetMessage(obj_id=MODULE_IDEN_FIRM_VER,
                                data=self.smarttec_mod_no_mem_default_module_iden_firm_ver2, dtype=DTYPE_UINT16)
-        hard_ver2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_HARD_VER_2,
+        hard_ver2 = SetMessage(obj_id=MODULE_IDEN_HARD_VER,
                                data=self.smarttec_mod_no_mem_default_module_iden_hard_ver2, dtype=DTYPE_UINT16)
-        name2 = SetMessage(obj_id=NO_MEM_DEFAULT_MODULE_IDEN_NAME_2,
+        name2 = SetMessage(obj_id=MODULE_IDEN_NAME,
                            data=self.smarttec_mod_no_mem_default_module_iden_name2, dtype=DTYPE_CSTR)
 
         container2 = SetMessage(
-            obj_id=NO_MEM_DEFAULT_MODULE_IDEN,
+            obj_id=MODULE_IDEN,
             dtype=DTYPE_CONTAINER,
             data=(type1,
                   firm_ver1,
@@ -1154,7 +1175,7 @@ class Detector:
                   )
         )
 
-        container1 = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_IDEN, data=container2, dtype=DTYPE_CONTAINER)
+        container1 = SetMessage(obj_id=SET_SMARTTEC_MOD_NO_MEM_DEFAULT, data=container2, dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(container1))
         if rm.is_valid():
@@ -1683,12 +1704,12 @@ class Detector:
         acdc = SetMessage(obj_id=MODULE_BASIC_PARAMS_I_TEC_MAX, data=self.module_smipdc_params_acdc, dtype=DTYPE_UINT8)
         bw = SetMessage(obj_id=MODULE_BASIC_PARAMS_T_DET, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
 
-        module_iden = SetMessage(obj_id=MODULE_IDEN_SMIPDC_DEFAULT, data=(det_u, det_i,
+        module_smipdc_params = SetMessage(obj_id=MODULE_SMIPDC_PARAMS, data=(det_u, det_i,
                                                                     gain, offset,
                                                                     varactor, trans,
                                                                     acdc, bw), dtype=DTYPE_CONTAINER)
 
-        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_SMIPDC_DEFAULT, data=module_iden, dtype=DTYPE_CONTAINER)
+        set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_SMIPDC_DEFAULT, data=module_smipdc_params, dtype=DTYPE_CONTAINER)
 
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(set_smarttec_mod_no_mem_iden))
 
@@ -1785,10 +1806,10 @@ class Detector:
 
 
 if __name__ == '__main__':
-    with Detector(port_name='COM7') as x:
+    with Detector(port_name='COM5') as x:
         x.get_device_iden()
-        x.get_module_user_set()
         x.get_module_smipdc_default()
+        x.get_module_user_set()
         print('1')
         print(x.module_smipdc_params_gain)
         x.module_smipdc_params_gain = 20
