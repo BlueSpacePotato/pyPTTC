@@ -6,11 +6,12 @@
         style="float: center; margin: 10px;"
     />
     <figcaption>
-        <a href="https://vigophotonics.com/us/products/infrared-detection-modules/accessories/">Vigo Photonics</a>PTCC Smarttec Controller. <a href="https://vigophotonics.com/us/">[Source]</a>   
+        <a href="https://vigophotonics.com/us/products/infrared-detection-modules/accessories/">Vigo Photonics</a> PTCC Smarttec Controller. <a href="https://vigophotonics.com/us/">[Source]</a>   
     </figcaption>
 </figure>
 
 
+# Project is under development
 
 # pyPTTC
 
