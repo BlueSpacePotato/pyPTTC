@@ -436,54 +436,6 @@ class Detector:
         self.smarttec_config_variant = None
         self.smarttec_config_no_mem_compatible = None
 
-        # smarttec monitor
-        self.smarttec_monitor_sup_on = None
-        self.smarttec_monitor_i_sup_plus = None
-        self.smarttec_monitor_i_sup_minus = None
-        self.smarttec_monitor_fan_on = None
-        self.smarttec_monitor_i_fan_plus = None
-        self.smarttec_monitor_i_tec = None
-        self.smarttec_monitor_u_tec = None
-        self.smarttec_monitor_u_sup_plus = None
-        self.smarttec_monitor_u_sup_minus = None
-        self.smarttec_monitor_t_det = None
-        self.smarttec_monitor_t_int = None
-        self.smarttec_monitor_pwm = None
-        self.smarttec_monitor_status = None
-        self.smarttec_monitor_module_type = None
-        self.monitor_th_adc = None
-
-        # module iden
-        self.module_iden_type = None
-        self.module_iden_firm_ver = None
-        self.module_iden_hard_ver = None
-        self.module_iden_name = None
-        self.module_iden_serial = None
-        self.module_iden_det_name = None
-        self.module_iden_det_serial = None
-        self.module_iden_prod_date = None
-        self.module_iden_tec_type = None
-        self.module_iden_tec_param1 = None
-        self.module_iden_tec_param2 = None
-        self.module_iden_tec_param3 = None
-        self.module_iden_tec_param4 = None
-        self.module_iden_th_type = None
-        self.module_iden_th_param1 = None
-        self.module_iden_th_param2 = None
-        self.module_iden_th_param3 = None
-        self.module_iden_th_param4 = None
-        self.module_iden_cool_time = None
-
-        # module basic params
-        self.module_basic_params_sup_ctrl = None
-        self.module_basic_params_u_sup_plus = None
-        self.module_basic_params_u_sup_minus = None
-        self.module_basic_params_fan_ctrl = None
-        self.module_basic_params_tec_ctrl = None
-        self.module_basic_params_pwm = None
-        self.module_basic_params_i_tec_max = None
-        self.module_basic_params_t_det = None
-
         # module check
         self.module_check_value = None
 
@@ -625,8 +577,8 @@ class Detector:
 
 
 class ModuleWithoutMemory(Detector):
-    def __init__(self):
-        super().__init__(port_name='auto')
+    def __init__(self, m_port_name):
+        super().__init__(port_name=m_port_name)
         # smarttec mod no mem default
         self.smarttec_mod_no_mem_default_module_iden_type1 = None
         self.smarttec_mod_no_mem_default_module_iden_firm_ver1 = None
@@ -666,6 +618,54 @@ class ModuleWithoutMemory(Detector):
         self.smarttec_mod_no_mem_user_max_module_iden_firm_ver2 = None
         self.smarttec_mod_no_mem_user_max_module_iden_hard_ver2 = None
         self.smarttec_mod_no_mem_user_max_module_iden_name2 = None
+
+        # smarttec monitor
+        self.smarttec_monitor_sup_on = None
+        self.smarttec_monitor_i_sup_plus = None
+        self.smarttec_monitor_i_sup_minus = None
+        self.smarttec_monitor_fan_on = None
+        self.smarttec_monitor_i_fan_plus = None
+        self.smarttec_monitor_i_tec = None
+        self.smarttec_monitor_u_tec = None
+        self.smarttec_monitor_u_sup_plus = None
+        self.smarttec_monitor_u_sup_minus = None
+        self.smarttec_monitor_t_det = None
+        self.smarttec_monitor_t_int = None
+        self.smarttec_monitor_pwm = None
+        self.smarttec_monitor_status = None
+        self.smarttec_monitor_module_type = None
+        self.monitor_th_adc = None
+
+        # module iden
+        self.module_iden_type = None
+        self.module_iden_firm_ver = None
+        self.module_iden_hard_ver = None
+        self.module_iden_name = None
+        self.module_iden_serial = None
+        self.module_iden_det_name = None
+        self.module_iden_det_serial = None
+        self.module_iden_prod_date = None
+        self.module_iden_tec_type = None
+        self.module_iden_tec_param1 = None
+        self.module_iden_tec_param2 = None
+        self.module_iden_tec_param3 = None
+        self.module_iden_tec_param4 = None
+        self.module_iden_th_type = None
+        self.module_iden_th_param1 = None
+        self.module_iden_th_param2 = None
+        self.module_iden_th_param3 = None
+        self.module_iden_th_param4 = None
+        self.module_iden_cool_time = None
+
+        # module basic params
+        self.module_basic_params_sup_ctrl = None
+        self.module_basic_params_u_sup_plus = None
+        self.module_basic_params_u_sup_minus = None
+        self.module_basic_params_fan_ctrl = None
+        self.module_basic_params_tec_ctrl = None
+        self.module_basic_params_pwm = None
+        self.module_basic_params_i_tec_max = None
+        self.module_basic_params_t_det = None
 
     def get_smarttec_config(self):
         """ command is used to read controller configurations data """
@@ -1359,8 +1359,8 @@ class ModuleWithoutMemory(Detector):
 
 
 class ModuleWithMemory(Detector):
-    def __init__(self):
-        super().__init__(port_name='auto')
+    def __init__(self, m_port_name):
+        super().__init__(port_name=m_port_name)
 
     def get_module_iden(self):
         """ command is used to read controller configurations data from module memory """
@@ -1709,8 +1709,8 @@ class ModuleWithMemory(Detector):
 
 
 class ModuleSMIPDC(Detector):
-    def __init__(self):
-        super().__init__(port_name='auto')
+    def __init__(self, m_port_name):
+        super().__init__(port_name=m_port_name)
         # module smipdc monitor
         self.module_smipdc_monitor_sup_plus = None
         self.module_smipdc_monitor_sup_minus = None
@@ -1931,7 +1931,7 @@ class ModuleSMIPDC(Detector):
 
 
 if __name__ == '__main__':
-    with ModuleSMIPDC(port_name='COM5') as x:
+    with ModuleSMIPDC(m_port_name='COM5') as x:
         x.get_device_iden()
         x.get_module_smipdc_default()
         print('1')
