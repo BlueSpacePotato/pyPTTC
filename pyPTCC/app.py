@@ -159,7 +159,7 @@ class TemplateMessage:
     Template class TemplateMessage
     """
 
-    def __init__(self, obj_id: int = None, data: bytes | tuple = None, dtype: int = None):
+    def __init__(self, obj_id: int = None, data: int | tuple | bytes = None, dtype: int = None):
         # unique object number
         self.obj_id = obj_id
 
@@ -224,7 +224,7 @@ class SetMessage(TemplateMessage):
     SetMessages includes commands with `set` prefix and requires arguments
     """
 
-    def __init__(self, obj_id: int, dtype: int, data: bytes | tuple | TemplateMessage = ''):
+    def __init__(self, obj_id: int, dtype: int, data):
         super().__init__()
         # unique object number
         self.obj_id = obj_id
@@ -474,9 +474,6 @@ class Detector:
         self.module_iden_th_param4 = None
         self.module_iden_cool_time = None
 
-        # module check
-        self.module_check_value = None
-
         # module basic params
         self.module_basic_params_sup_ctrl = None
         self.module_basic_params_u_sup_plus = None
@@ -487,73 +484,11 @@ class Detector:
         self.module_basic_params_i_tec_max = None
         self.module_basic_params_t_det = None
 
+        # module check
+        self.module_check_value = None
+
         # module user set bank
         self.module_user_set_bank_index = None
-
-        # module smipdc monitor
-        self.module_smipdc_monitor_sup_plus = None
-        self.module_smipdc_monitor_sup_minus = None
-        self.module_smipdc_monitor_fan_plus = None
-        self.module_smipdc_monitor_tec_plus = None
-        self.module_smipdc_monitor_tec_minus = None
-        self.module_smipdc_monitor_th1 = None
-        self.module_smipdc_monitor_th2 = None
-        self.module_smipdc_monitor_u_det = None
-        self.module_smipdc_monitor_u_1st = None
-        self.module_smipdc_monitor_u_out = None
-        self.module_smipdc_monitor_temp = None
-
-        # module smipdc params
-        self.module_smipdc_params_det_u = None
-        self.module_smipdc_params_det_i = None
-        self.module_smipdc_params_gain = None
-        self.module_smipdc_params_offset = None
-        self.module_smipdc_params_varactor = None
-        self.module_smipdc_params_trans = None
-        self.module_smipdc_params_acdc = None
-        self.module_smipdc_params_bw = None
-
-        # smarttec mod no mem default
-        self.smarttec_mod_no_mem_default_module_iden_type1 = None
-        self.smarttec_mod_no_mem_default_module_iden_firm_ver1 = None
-        self.smarttec_mod_no_mem_default_module_iden_hard_ver1 = None
-        self.smarttec_mod_no_mem_default_module_iden_name1 = None
-        self.smarttec_mod_no_mem_default_module_iden_type2 = None
-        self.smarttec_mod_no_mem_default_module_iden_firm_ver2 = None
-        self.smarttec_mod_no_mem_default_module_iden_hard_ver2 = None
-        self.smarttec_mod_no_mem_default_module_iden_name2 = None
-
-        # smarttec mod no mem user set
-        self.smarttec_mod_no_mem_user_set_module_iden_type1 = None
-        self.smarttec_mod_no_mem_user_set_module_iden_firm_ver1 = None
-        self.smarttec_mod_no_mem_user_set_module_iden_hard_ver1 = None
-        self.smarttec_mod_no_mem_user_set_module_iden_name1 = None
-        self.smarttec_mod_no_mem_user_set_module_iden_type2 = None
-        self.smarttec_mod_no_mem_user_set_module_iden_firm_ver2 = None
-        self.smarttec_mod_no_mem_user_set_module_iden_hard_ver2 = None
-        self.smarttec_mod_no_mem_user_set_module_iden_name2 = None
-
-        # smarttec mod no mem user min
-        self.smarttec_mod_no_mem_user_min_module_iden_type1 = None
-        self.smarttec_mod_no_mem_user_min_module_iden_firm_ver1 = None
-        self.smarttec_mod_no_mem_user_min_module_iden_hard_ver1 = None
-        self.smarttec_mod_no_mem_user_min_module_iden_name1 = None
-        self.smarttec_mod_no_mem_user_min_module_iden_type2 = None
-        self.smarttec_mod_no_mem_user_min_module_iden_firm_ver2 = None
-        self.smarttec_mod_no_mem_user_min_module_iden_hard_ver2 = None
-        self.smarttec_mod_no_mem_user_min_module_iden_name2 = None
-
-        # smarttec mod no mem user max
-        self.smarttec_mod_no_mem_user_max_module_iden_type1 = None
-        self.smarttec_mod_no_mem_user_max_module_iden_firm_ver1 = None
-        self.smarttec_mod_no_mem_user_max_module_iden_hard_ver1 = None
-        self.smarttec_mod_no_mem_user_max_module_iden_name1 = None
-        self.smarttec_mod_no_mem_user_max_module_iden_type2 = None
-        self.smarttec_mod_no_mem_user_max_module_iden_firm_ver2 = None
-        self.smarttec_mod_no_mem_user_max_module_iden_hard_ver2 = None
-        self.smarttec_mod_no_mem_user_max_module_iden_name2 = None
-
-        # set module iden -> same variables as module iden
 
     def __enter__(self):
         """
@@ -622,6 +557,8 @@ class Detector:
 
         return self._serial.readline()
 
+    # ----- CommonCommands -----------------------------------------------------------------------------------------
+
     def get_service_mode(self):
         """ command is used to check if service mode is enabled/disabled """
         obj = QueryMessage(obj_id=GET_SERVICE_MODE)
@@ -632,230 +569,6 @@ class Detector:
             return self.service_mode
         else:
             raise TypeError("no data - get_service_mode()")
-
-    def get_device_iden(self):
-        obj = QueryMessage(obj_id=GET_DEVICE_IDEN)
-        rm = ResponseMessage(obj_id=DEVICE_IDEN, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.device_iden_type, self.device_iden_firm_ver, self.device_iden_hard_ver, self.device_iden_name, \
-                self.device_iden_serial, self.device_iden_prod_date = rm.parse_data()
-        else:
-            raise TypeError("no data - get_device_iden()")
-
-    def get_smarttec_config(self):
-        """ command is used to read controller configurations data """
-        obj = QueryMessage(obj_id=GET_SMARTTEC_CONFIG)
-        rm = ResponseMessage(obj_id=SMARTTEC_CONFIG, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.smarttec_config_variant, self.smarttec_config_no_mem_compatible = rm.parse_data()
-        else:
-            raise TypeError("no data - get_smarttec_config()")
-
-    def get_smarttec_monitor(self):
-        """  command is used to read controller data configurations """
-        obj = QueryMessage(obj_id=GET_SMARTTEC_MONITOR)
-        rm = ResponseMessage(obj_id=SMARTTEC_MONITOR, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.smarttec_monitor_sup_on, self.smarttec_monitor_i_sup_plus, self.smarttec_monitor_u_sup_minus, \
-                self.smarttec_monitor_fan_on, self.smarttec_monitor_i_fan_plus, self.smarttec_monitor_i_tec, \
-                self.smarttec_monitor_u_tec, self.smarttec_monitor_u_sup_plus, self.smarttec_monitor_u_sup_minus, \
-                self.smarttec_monitor_t_det, self.smarttec_monitor_t_int, self.smarttec_monitor_pwm, \
-                self.smarttec_monitor_status, self.smarttec_monitor_module_type = rm.parse_data()
-        else:
-            raise TypeError("no data - get_smarttec_monitor()")
-
-    def get_smarttec_mod_no_mem_iden(self):
-        """ command is used to read data in no memory IR module """
-        obj = QueryMessage(obj_id=GET_SMARTTEC_MOD_NO_MEM_IDEN)
-        rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
-                self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, \
-                self.module_iden_prod_date, self.module_iden_tec_type, self.module_iden_th_type, self.module_iden_tec_param1, \
-                self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4, \
-                self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3, \
-                self.module_iden_th_param4, self.module_iden_cool_time = rm.parse_data()
-        else:
-            raise TypeError("no data - get_smarttec_mod_no_mem_iden()")
-
-    def get_smarttec_mod_no_mem_default(self):
-        """ command is used to read default data in no memory IR """
-        obj = QueryMessage(obj_id=GET_SMARTTEC_MOD_NO_MEM_DEFAULT)
-        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
-        else:
-            raise TypeError("no data - get_smarttec_mod_no_mem_default()")
-
-    def get_smarttec_mod_no_mem_user_set(self):
-        """ command is used to read user settings in no memory module (NOMEM) """
-        obj = QueryMessage(obj_id=GET_SMARTTEC_MOD_NO_MEM_USER_SET)
-        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
-        else:
-            raise TypeError("no data - get_smarttec_mod_no_mem_user_set()")
-
-    def get_smarttec_mod_no_mem_user_min(self):
-        """ command is used to read minimum settings of no memory module (NOMEM) """
-        obj = QueryMessage(obj_id=GET_SMARTTEC_MOD_NO_MEM_USER_MIN)
-        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
-        else:
-            raise TypeError("no data - get_smarttec_mod_no_mem_user_min()")
-
-    def get_smarttec_mod_no_mem_user_max(self):
-        """ command is used to read maximum settings of no memory module (NOMEM) """
-        obj = QueryMessage(obj_id=GET_SMARTTEC_MOD_NO_MEM_USER_MAX)
-        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
-        else:
-            raise TypeError("no data - get_smarttec_mod_no_mem_user_max()")
-
-    def get_module_iden(self):
-        """ command is used to read controller configurations data from module memory """
-        obj = QueryMessage(obj_id=GET_MODULE_IDEN)
-
-        rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
-                self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, self.module_iden_prod_date, \
-                self.module_iden_tec_type, self.module_iden_th_type, self.module_iden_tec_param1, \
-                self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4, \
-                self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3, \
-                self.module_iden_th_param4, self.module_iden_cool_time = rm.parse_data()
-        else:
-            raise TypeError("no data - get_module_iden()")
-
-    def get_module_default(self):
-        """  command is used to read default configurations from module memory """
-        obj = QueryMessage(obj_id=GET_MODULE_DEFAULT)
-        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
-        else:
-            raise TypeError("no data - get_module_default()")
-
-    def get_module_user_set(self):
-        """ command is used to read basic user settings from module memory """
-        obj = QueryMessage(obj_id=GET_MODULE_USER_SET)
-        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
-        else:
-            raise TypeError("no data - get_module_user_set()")
-
-    def get_module_user_min(self):
-        """ command is used to read minimum basic settings from module memory """
-        obj = QueryMessage(obj_id=GET_MODULE_USER_MIN)
-        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
-        else:
-            raise TypeError("no data - get_module_user_min()")
-
-    def get_module_user_max(self):
-        """ command is used to save minimum basic settings of no memory module """
-        obj = QueryMessage(obj_id=GET_MODULE_USER_MAX)
-        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
-                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
-                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
-        else:
-            raise TypeError("no data - get_module_user_max()")
-
-    def get_module_smipdc_monitor(self):
-        """ command is used to read actuall controller data configurations from module SMIPDC """
-        obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_MONITOR)
-        rm = ResponseMessage(obj_id=MODULE_SMIPDC_MONITOR, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.module_smipdc_monitor_sup_plus, self.module_smipdc_monitor_sup_minus, self.module_smipdc_monitor_fan_plus, \
-                self.module_smipdc_monitor_tec_plus, self.module_smipdc_monitor_tec_minus, self.module_smipdc_monitor_th1, \
-                self.module_smipdc_monitor_th2, self.module_smipdc_monitor_u_det, self.module_smipdc_monitor_u_1st, \
-                self.module_smipdc_monitor_u_out, self.module_smipdc_monitor_temp = rm.parse_data()
-        else:
-            raise TypeError("no data - get_module_smipdc_monitor()")
-
-    def get_module_smipdc_default(self):
-        """ command is used to read default configurations from module SMIPDC """
-        obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_DEFAULT)
-        rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
-                self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
-                self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
-        else:
-            raise TypeError("no data - get_module_smipdc_default()")
-
-    def get_module_smipdc_user_set(self):
-        """  command is used to read configurations from module SMIPDC """
-        obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_USER_SET)
-        rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
-                self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
-                self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
-        else:
-            raise TypeError("no data - get_module_smipdc_user_set()")
-
-    def get_module_smipdc_user_min(self):
-        """ command is used to read minimum settings from module SMIPDC """
-        obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_USER_MIN)
-        rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
-                self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
-                self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
-        else:
-            raise TypeError("no data - get_module_smipdc_user_min()")
-
-    def get_module_smipdc_user_max(self):
-        """ command is used to read maximum settings from module SMIPDC """
-        obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_USER_MAX)
-        rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
-
-        if rm.is_valid():
-            self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
-                self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
-                self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
-        else:
-            raise TypeError("no data - get_module_smipdc_user_max()")
-
-    # -----------------SETTER--------------------------------------------------------------------------------------------
 
     def set_service_mode(self, mode: int):
         """ command is used to set service mode. """
@@ -900,6 +613,70 @@ class Detector:
         else:
             raise TypeError("no data - _set_transparent_mode()")
 
+    def get_device_iden(self):
+        obj = QueryMessage(obj_id=GET_DEVICE_IDEN)
+        rm = ResponseMessage(obj_id=DEVICE_IDEN, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.device_iden_type, self.device_iden_firm_ver, self.device_iden_hard_ver, self.device_iden_name, \
+                self.device_iden_serial, self.device_iden_prod_date = rm.parse_data()
+        else:
+            raise TypeError("no data - get_device_iden()")
+
+
+class ModuleWithoutMemory(Detector):
+    def __init__(self):
+        super().__init__(port_name='auto')
+        # smarttec mod no mem default
+        self.smarttec_mod_no_mem_default_module_iden_type1 = None
+        self.smarttec_mod_no_mem_default_module_iden_firm_ver1 = None
+        self.smarttec_mod_no_mem_default_module_iden_hard_ver1 = None
+        self.smarttec_mod_no_mem_default_module_iden_name1 = None
+        self.smarttec_mod_no_mem_default_module_iden_type2 = None
+        self.smarttec_mod_no_mem_default_module_iden_firm_ver2 = None
+        self.smarttec_mod_no_mem_default_module_iden_hard_ver2 = None
+        self.smarttec_mod_no_mem_default_module_iden_name2 = None
+
+        # smarttec mod no mem user set
+        self.smarttec_mod_no_mem_user_set_module_iden_type1 = None
+        self.smarttec_mod_no_mem_user_set_module_iden_firm_ver1 = None
+        self.smarttec_mod_no_mem_user_set_module_iden_hard_ver1 = None
+        self.smarttec_mod_no_mem_user_set_module_iden_name1 = None
+        self.smarttec_mod_no_mem_user_set_module_iden_type2 = None
+        self.smarttec_mod_no_mem_user_set_module_iden_firm_ver2 = None
+        self.smarttec_mod_no_mem_user_set_module_iden_hard_ver2 = None
+        self.smarttec_mod_no_mem_user_set_module_iden_name2 = None
+
+        # smarttec mod no mem user min
+        self.smarttec_mod_no_mem_user_min_module_iden_type1 = None
+        self.smarttec_mod_no_mem_user_min_module_iden_firm_ver1 = None
+        self.smarttec_mod_no_mem_user_min_module_iden_hard_ver1 = None
+        self.smarttec_mod_no_mem_user_min_module_iden_name1 = None
+        self.smarttec_mod_no_mem_user_min_module_iden_type2 = None
+        self.smarttec_mod_no_mem_user_min_module_iden_firm_ver2 = None
+        self.smarttec_mod_no_mem_user_min_module_iden_hard_ver2 = None
+        self.smarttec_mod_no_mem_user_min_module_iden_name2 = None
+
+        # smarttec mod no mem user max
+        self.smarttec_mod_no_mem_user_max_module_iden_type1 = None
+        self.smarttec_mod_no_mem_user_max_module_iden_firm_ver1 = None
+        self.smarttec_mod_no_mem_user_max_module_iden_hard_ver1 = None
+        self.smarttec_mod_no_mem_user_max_module_iden_name1 = None
+        self.smarttec_mod_no_mem_user_max_module_iden_type2 = None
+        self.smarttec_mod_no_mem_user_max_module_iden_firm_ver2 = None
+        self.smarttec_mod_no_mem_user_max_module_iden_hard_ver2 = None
+        self.smarttec_mod_no_mem_user_max_module_iden_name2 = None
+
+    def get_smarttec_config(self):
+        """ command is used to read controller configurations data """
+        obj = QueryMessage(obj_id=GET_SMARTTEC_CONFIG)
+        rm = ResponseMessage(obj_id=SMARTTEC_CONFIG, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.smarttec_config_variant, self.smarttec_config_no_mem_compatible = rm.parse_data()
+        else:
+            raise TypeError("no data - get_smarttec_config()")
+
     def set_smarttec_config_variant(self, variant: int):
         """ command is used to set configuration of SMARTEC type (Basic/OEM/Adavanced) and memory compatiblety. """
         # variant -> val = 0-2 (0= Basic, 1 = OEM, 2 = Advanced)
@@ -936,6 +713,35 @@ class Detector:
             self.set_smarttec_config_variant, self.smarttec_config_no_mem_compatible = rm.parse_data()[0]
         else:
             raise TypeError("no data - _set_smarttec_config()")
+
+    def get_smarttec_monitor(self):
+        """  command is used to read controller data configurations """
+        obj = QueryMessage(obj_id=GET_SMARTTEC_MONITOR)
+        rm = ResponseMessage(obj_id=SMARTTEC_MONITOR, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.smarttec_monitor_sup_on, self.smarttec_monitor_i_sup_plus, self.smarttec_monitor_u_sup_minus, \
+                self.smarttec_monitor_fan_on, self.smarttec_monitor_i_fan_plus, self.smarttec_monitor_i_tec, \
+                self.smarttec_monitor_u_tec, self.smarttec_monitor_u_sup_plus, self.smarttec_monitor_u_sup_minus, \
+                self.smarttec_monitor_t_det, self.smarttec_monitor_t_int, self.smarttec_monitor_pwm, \
+                self.smarttec_monitor_status, self.smarttec_monitor_module_type = rm.parse_data()
+        else:
+            raise TypeError("no data - get_smarttec_monitor()")
+
+    def get_smarttec_mod_no_mem_iden(self):
+        """ command is used to read data in no memory IR module """
+        obj = QueryMessage(obj_id=GET_SMARTTEC_MOD_NO_MEM_IDEN)
+        rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+                self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, \
+                self.module_iden_prod_date, self.module_iden_tec_type, self.module_iden_th_type, self.module_iden_tec_param1, \
+                self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4, \
+                self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3, \
+                self.module_iden_th_param4, self.module_iden_cool_time = rm.parse_data()
+        else:
+            raise TypeError("no data - get_smarttec_mod_no_mem_iden()")
 
     def set_smarttec_mod_no_mem_iden_type(self, iden_type: int):
         """ command is used to set data in no memory IR module (NOMEM) """
@@ -1128,6 +934,18 @@ class Detector:
         else:
             raise TypeError("no data - _set_smarttec_mod_no_mem_iden()")
 
+    def get_smarttec_mod_no_mem_default(self):
+        """ command is used to read default data in no memory IR """
+        obj = QueryMessage(obj_id=GET_SMARTTEC_MOD_NO_MEM_DEFAULT)
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - get_smarttec_mod_no_mem_default()")
+
     def set_smarttec_mod_no_mem_default_module_iden_type1(self, type1: int):
         """ command is used to set default configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_default_module_iden_type1 = type1
@@ -1220,6 +1038,18 @@ class Detector:
                 self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
         else:
             raise TypeError("no data - _set_smarttec_mod_no_mem_default()")
+
+    def get_smarttec_mod_no_mem_user_set(self):
+        """ command is used to read user settings in no memory module (NOMEM) """
+        obj = QueryMessage(obj_id=GET_SMARTTEC_MOD_NO_MEM_USER_SET)
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - get_smarttec_mod_no_mem_user_set()")
 
     def set_smarttec_mod_no_mem_user_set_module_iden_type1(self, type1: int):
         """ command is used to set user configuration in no memory IR module (NOMEM) """
@@ -1315,6 +1145,18 @@ class Detector:
         else:
             raise TypeError("no data - _set_smarttec_mod_no_mem_user_set")
 
+    def get_smarttec_mod_no_mem_user_min(self):
+        """ command is used to read minimum settings of no memory module (NOMEM) """
+        obj = QueryMessage(obj_id=GET_SMARTTEC_MOD_NO_MEM_USER_MIN)
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - get_smarttec_mod_no_mem_user_min()")
+
     def set_smarttec_mod_no_mem_user_min_module_iden_type1(self, type1: int):
         """ command is used to set user lower limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_min_module_iden_type1 = type1
@@ -1409,6 +1251,18 @@ class Detector:
         else:
             raise TypeError("no data - _set_smarttec_mod_no_mem_user_min()")
 
+    def get_smarttec_mod_no_mem_user_max(self):
+        """ command is used to read maximum settings of no memory module (NOMEM) """
+        obj = QueryMessage(obj_id=GET_SMARTTEC_MOD_NO_MEM_USER_MAX)
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - get_smarttec_mod_no_mem_user_max()")
+
     def set_smarttec_mod_no_mem_user_max_module_iden_type1(self, type1: int):
         """ command is used to set user upper limits configuration in no memory IR module (NOMEM) """
         self.smarttec_mod_no_mem_user_max_module_iden_type1 = type1
@@ -1502,6 +1356,27 @@ class Detector:
                 self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
         else:
             raise TypeError("no data - _set_smarttec_mod_no_mem_user_max()")
+
+
+class ModuleWithMemory(Detector):
+    def __init__(self):
+        super().__init__(port_name='auto')
+
+    def get_module_iden(self):
+        """ command is used to read controller configurations data from module memory """
+        obj = QueryMessage(obj_id=GET_MODULE_IDEN)
+
+        rm = ResponseMessage(obj_id=MODULE_IDEN, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name, \
+                self.module_iden_serial, self.module_iden_det_name, self.module_iden_det_serial, self.module_iden_prod_date, \
+                self.module_iden_tec_type, self.module_iden_th_type, self.module_iden_tec_param1, \
+                self.module_iden_tec_param2, self.module_iden_tec_param3, self.module_iden_tec_param4, \
+                self.module_iden_th_param1, self.module_iden_th_param2, self.module_iden_th_param3, \
+                self.module_iden_th_param4, self.module_iden_cool_time = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_iden()")
 
     def set_module_iden_type(self, mtype: int):
         """ command is used to set data configuration """
@@ -1668,6 +1543,18 @@ class Detector:
         else:
             raise TypeError("no data - _set_module_iden()")
 
+    def get_module_default(self):
+        """  command is used to read default configurations from module memory """
+        obj = QueryMessage(obj_id=GET_MODULE_DEFAULT)
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_default()")
+
     def set_module_default(self):
         """ command is used to set default data configuration """
         i_type1 = SetMessage(obj_id=MODULE_IDEN_TYPE, data=self.module_iden_type, dtype=DTYPE_UINT8)
@@ -1696,6 +1583,18 @@ class Detector:
         else:
             raise TypeError("no data - set_module_default()")
 
+    def get_module_user_set(self):
+        """ command is used to read basic user settings from module memory """
+        obj = QueryMessage(obj_id=GET_MODULE_USER_SET)
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_user_set()")
+
     def set_module_user_set(self):
         """ command is used to set user configuration """
         i_type1 = SetMessage(obj_id=MODULE_IDEN_TYPE, data=self.module_iden_type, dtype=DTYPE_UINT8)
@@ -1723,6 +1622,18 @@ class Detector:
                 self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name = rm.parse_data()
         else:
             raise TypeError("no data - set_module_user_set()")
+
+    def get_module_user_min(self):
+        """ command is used to read minimum basic settings from module memory """
+        obj = QueryMessage(obj_id=GET_MODULE_USER_MIN)
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_user_min()")
 
     def set_module_user_min(self):
         """ command is used to set user lower limits configuration """
@@ -1754,6 +1665,18 @@ class Detector:
         else:
             raise TypeError("no data - set_module_user_min()")
 
+    def get_module_user_max(self):
+        """ command is used to save minimum basic settings of no memory module """
+        obj = QueryMessage(obj_id=GET_MODULE_USER_MAX)
+        rm = ResponseMessage(obj_id=MODULE_BASIC_PARAMS, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.module_basic_params_sup_ctrl, self.module_basic_params_u_sup_plus, self.module_basic_params_u_sup_minus, \
+                self.module_basic_params_fan_ctrl, self.module_basic_params_tec_ctrl, self.module_basic_params_pwm, \
+                self.module_basic_params_i_tec_max, self.module_basic_params_t_det = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_user_max()")
+
     def set_module_user_max(self):
         """ command is used to set user lower limits configuration """
         i_type1 = SetMessage(obj_id=MODULE_IDEN_TYPE, data=self.module_iden_type, dtype=DTYPE_UINT8)
@@ -1783,6 +1706,58 @@ class Detector:
                 self.module_iden_type, self.module_iden_firm_ver, self.module_iden_hard_ver, self.module_iden_name = rm.parse_data()
         else:
             raise TypeError("no data - set_module_user_max()")
+
+
+class ModuleSMIPDC(Detector):
+    def __init__(self):
+        super().__init__(port_name='auto')
+        # module smipdc monitor
+        self.module_smipdc_monitor_sup_plus = None
+        self.module_smipdc_monitor_sup_minus = None
+        self.module_smipdc_monitor_fan_plus = None
+        self.module_smipdc_monitor_tec_plus = None
+        self.module_smipdc_monitor_tec_minus = None
+        self.module_smipdc_monitor_th1 = None
+        self.module_smipdc_monitor_th2 = None
+        self.module_smipdc_monitor_u_det = None
+        self.module_smipdc_monitor_u_1st = None
+        self.module_smipdc_monitor_u_out = None
+        self.module_smipdc_monitor_temp = None
+
+        # module smipdc params
+        self.module_smipdc_params_det_u = None
+        self.module_smipdc_params_det_i = None
+        self.module_smipdc_params_gain = None
+        self.module_smipdc_params_offset = None
+        self.module_smipdc_params_varactor = None
+        self.module_smipdc_params_trans = None
+        self.module_smipdc_params_acdc = None
+        self.module_smipdc_params_bw = None
+
+    def get_module_smipdc_monitor(self):
+        """ command is used to read actuall controller data configurations from module SMIPDC """
+        obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_MONITOR)
+        rm = ResponseMessage(obj_id=MODULE_SMIPDC_MONITOR, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.module_smipdc_monitor_sup_plus, self.module_smipdc_monitor_sup_minus, self.module_smipdc_monitor_fan_plus, \
+                self.module_smipdc_monitor_tec_plus, self.module_smipdc_monitor_tec_minus, self.module_smipdc_monitor_th1, \
+                self.module_smipdc_monitor_th2, self.module_smipdc_monitor_u_det, self.module_smipdc_monitor_u_1st, \
+                self.module_smipdc_monitor_u_out, self.module_smipdc_monitor_temp = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_smipdc_monitor()")
+
+    def get_module_smipdc_default(self):
+        """ command is used to read default configurations from module SMIPDC """
+        obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_DEFAULT)
+        rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+                self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+                self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_smipdc_default()")
 
     def set_module_smipdc_default(self):
         """ command is used to set default configuration in SMIPDC module """
@@ -1815,6 +1790,18 @@ class Detector:
                 self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
         else:
             raise TypeError("no data - set_module_smipdc_default()")
+
+    def get_module_smipdc_user_set(self):
+        """  command is used to read configurations from module SMIPDC """
+        obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_USER_SET)
+        rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+                self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+                self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_smipdc_user_set()")
 
     def set_module_smipdc_user_set(self):
         """ command is used to set user configuration in SMIPDC module """
@@ -1850,6 +1837,18 @@ class Detector:
         else:
             raise TypeError("no data - set_module_smipdc_user_set()")
 
+    def get_module_smipdc_user_min(self):
+        """ command is used to read minimum settings from module SMIPDC """
+        obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_USER_MIN)
+        rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+                self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+                self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_smipdc_user_min()")
+
     def set_module_smipdc_user_min(self):
         """ command is used to set user lower limits configuration in SMIPDC module """
         det_u = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_U, data=self.module_smipdc_params_det_u,
@@ -1884,6 +1883,18 @@ class Detector:
         else:
             raise TypeError("no data - set_module_smipdc_user_min()")
 
+    def get_module_smipdc_user_max(self):
+        """ command is used to read maximum settings from module SMIPDC """
+        obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_USER_MAX)
+        rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
+
+        if rm.is_valid():
+            self.module_smipdc_params_det_u, self.module_smipdc_params_det_i, self.module_smipdc_params_gain, \
+                self.module_smipdc_params_offset, self.module_smipdc_params_varactor, self.module_smipdc_params_trans, \
+                self.module_smipdc_params_acdc, self.module_smipdc_params_bw = rm.parse_data()
+        else:
+            raise TypeError("no data - get_module_smipdc_user_max()")
+
     def set_module_smipdc_user_max(self):
         """ command is used to set user upper limits configuration in SMIPDC module """
         det_u = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_U, data=self.module_smipdc_params_det_u,
@@ -1902,9 +1913,9 @@ class Detector:
         bw = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_BW, data=self.module_smipdc_params_bw, dtype=DTYPE_UINT8)
 
         module_iden = SetMessage(obj_id=MODULE_IDEN, data=(det_u, det_i,
-                                                                    gain, offset,
-                                                                    varactor, trans,
-                                                                    acdc, bw), dtype=DTYPE_CONTAINER)
+                                                           gain, offset,
+                                                           varactor, trans,
+                                                           acdc, bw), dtype=DTYPE_CONTAINER)
 
         set_smarttec_mod_no_mem_iden = SetMessage(obj_id=SET_MODULE_SMIPDC_USER_MAX, data=module_iden,
                                                   dtype=DTYPE_CONTAINER)
@@ -1920,10 +1931,9 @@ class Detector:
 
 
 if __name__ == '__main__':
-    with Detector(port_name='COM5') as x:
+    with ModuleSMIPDC(port_name='COM5') as x:
         x.get_device_iden()
         x.get_module_smipdc_default()
-        x.get_module_user_set()
         print('1')
         print(x.module_smipdc_params_gain)
         x.module_smipdc_params_gain = 20
