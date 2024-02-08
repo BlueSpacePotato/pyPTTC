@@ -240,7 +240,7 @@ class SetMessage(TemplateMessage):
         elif isinstance(data, SetMessage):
             self.data = data.data
         else:
-            print(type(data))
+            # print(type(data))
             self.data = f'{data}'.encode('utf-8')
 
         self.dtype = dtype
@@ -319,7 +319,7 @@ class ResponseMessage(TemplateMessage):
 
     def parse_data(self, data=None):
         """
-        pase field data to an return all values from the objects
+        pase field data to a return all values from the objects
         :return:
         """
 
@@ -392,17 +392,20 @@ class Detector:
 
         :param port_name: str with port name e.g. `com3` or `/dev/ttyUSB0`
         """
-
+        print('Detector-class init')
         self._serial = serial.Serial()
         if port_name == 'auto':
+            print('port_name == auto - if')
             try:
                 self._serial.port = self.find_com_port()
             except ConnectionError as ce:
                 raise IOError('Detector not found!')
         elif port_name == 'dummy':
+            print('port_name == dummy')
             self._serial.port = port_name
         else:
             self._serial.port = port_name
+            print('Port_name: ', port_name)
 
         self._serial.baudrate = 57600
         self._serial.timeout = 0.2
@@ -446,6 +449,7 @@ class Detector:
         """
         magic method - enter
         """
+        print('enter-method')
         if not self._connection_error:
             try:
                 if self._context_depth == 0 and self._serial.port is not None and not self._serial.is_open:
@@ -469,6 +473,7 @@ class Detector:
         :param trace:
         :return: bool - ture if no errors
         """
+        print('exit method')
         self._context_depth -= 1
         if self._context_depth == 0:
             self._serial.close()
@@ -486,9 +491,11 @@ class Detector:
 
         :return: str with port_name
         """
+        print('find com port method')
         ports = comports()
         for i in ports:
             if i.manufacturer == self.DRIVER_NAME:
+                print('Driver Name: ', self.DRIVER_NAME)
                 return i.device
         else:
             raise ConnectionError(
@@ -500,7 +507,7 @@ class Detector:
         """
 
         """
-
+        #print('write and read method')
         if not isinstance(obj, TemplateMessage):
             raise TypeError('Obj should be a BasicObject')
 
@@ -513,6 +520,7 @@ class Detector:
 
     def get_service_mode(self):
         """ command is used to check if service mode is enabled/disabled """
+        print('get service mode method')
         obj = QueryMessage(obj_id=GET_SERVICE_MODE)
         rm = ResponseMessage(obj_id=SERVICE_MODE, data=self.write_and_read(obj))
 
@@ -524,12 +532,14 @@ class Detector:
 
     def set_service_mode(self, mode: int):
         """ command is used to set service mode. """
+        print('set service mode method')
         self.service_mode = mode
         self._set_service_mode()
         return self.service_mode
 
     def _set_service_mode(self):
         """ command is used to set service mode. """
+        print('_set service mode method')
         service_mode = SetMessage(obj_id=SERVICE_MODE_ENABLE, data=self.service_mode, dtype=DTYPE_BOOL)
         head_service_mode = SetMessage(obj_id=SERVICE_MODE, data=service_mode, dtype=DTYPE_CONTAINER)
         head_set_service_mode = SetMessage(obj_id=SET_SERVICE_MODE, data=head_service_mode, dtype=DTYPE_CONTAINER)
@@ -566,6 +576,7 @@ class Detector:
             raise TypeError("no data - _set_transparent_mode()")
 
     def get_device_iden(self):
+        print('get device iden method')
         obj = QueryMessage(obj_id=GET_DEVICE_IDEN)
         rm = ResponseMessage(obj_id=DEVICE_IDEN, data=self.write_and_read(obj))
 
@@ -578,6 +589,7 @@ class Detector:
 
 class ModuleWithoutMemory(Detector):
     def __init__(self, m_port_name):
+        print('Module without memory init')
         super().__init__(port_name=m_port_name)
         # smarttec mod no mem default
         self.smarttec_mod_no_mem_default_module_iden_type1 = None
@@ -1360,7 +1372,39 @@ class ModuleWithoutMemory(Detector):
 
 class ModuleWithMemory(Detector):
     def __init__(self, m_port_name):
+        print('Module with memory init')
         super().__init__(port_name=m_port_name)
+
+        # module iden
+        self.module_iden_type = None
+        self.module_iden_firm_ver = None
+        self.module_iden_hard_ver = None
+        self.module_iden_name = None
+        self.module_iden_serial = None
+        self.module_iden_det_name = None
+        self.module_iden_det_serial = None
+        self.module_iden_prod_date = None
+        self.module_iden_tec_type = None
+        self.module_iden_tec_param1 = None
+        self.module_iden_tec_param2 = None
+        self.module_iden_tec_param3 = None
+        self.module_iden_tec_param4 = None
+        self.module_iden_th_type = None
+        self.module_iden_th_param1 = None
+        self.module_iden_th_param2 = None
+        self.module_iden_th_param3 = None
+        self.module_iden_th_param4 = None
+        self.module_iden_cool_time = None
+
+        # module basic params
+        self.module_basic_params_sup_ctrl = None
+        self.module_basic_params_u_sup_plus = None
+        self.module_basic_params_u_sup_minus = None
+        self.module_basic_params_fan_ctrl = None
+        self.module_basic_params_tec_ctrl = None
+        self.module_basic_params_pwm = None
+        self.module_basic_params_i_tec_max = None
+        self.module_basic_params_t_det = None
 
     def get_module_iden(self):
         """ command is used to read controller configurations data from module memory """
@@ -1710,29 +1754,30 @@ class ModuleWithMemory(Detector):
 
 class ModuleSMIPDC(Detector):
     def __init__(self, m_port_name):
+        print('Module SMIPDC init')
         super().__init__(port_name=m_port_name)
         # module smipdc monitor
-        self.module_smipdc_monitor_sup_plus = None
-        self.module_smipdc_monitor_sup_minus = None
-        self.module_smipdc_monitor_fan_plus = None
-        self.module_smipdc_monitor_tec_plus = None
-        self.module_smipdc_monitor_tec_minus = None
-        self.module_smipdc_monitor_th1 = None
-        self.module_smipdc_monitor_th2 = None
-        self.module_smipdc_monitor_u_det = None
-        self.module_smipdc_monitor_u_1st = None
-        self.module_smipdc_monitor_u_out = None
-        self.module_smipdc_monitor_temp = None
+        self.module_smipdc_monitor_sup_plus = 0000
+        self.module_smipdc_monitor_sup_minus = 0000
+        self.module_smipdc_monitor_fan_plus = 0000
+        self.module_smipdc_monitor_tec_plus = 0000
+        self.module_smipdc_monitor_tec_minus = 0000
+        self.module_smipdc_monitor_th1 = 0000
+        self.module_smipdc_monitor_th2 = 0000
+        self.module_smipdc_monitor_u_det = 0000
+        self.module_smipdc_monitor_u_1st = 0000
+        self.module_smipdc_monitor_u_out = 0000
+        self.module_smipdc_monitor_temp = 0000
 
         # module smipdc params
-        self.module_smipdc_params_det_u = None
-        self.module_smipdc_params_det_i = None
-        self.module_smipdc_params_gain = None
-        self.module_smipdc_params_offset = None
-        self.module_smipdc_params_varactor = None
-        self.module_smipdc_params_trans = None
-        self.module_smipdc_params_acdc = None
-        self.module_smipdc_params_bw = None
+        self.module_smipdc_params_det_u = 00
+        self.module_smipdc_params_det_i = 2328
+        self.module_smipdc_params_gain = 'DCD8'
+        self.module_smipdc_params_offset = 00
+        self.module_smipdc_params_varactor = 00
+        self.module_smipdc_params_trans = 00
+        self.module_smipdc_params_acdc = 00
+        self.module_smipdc_params_bw = 00
 
     def get_module_smipdc_monitor(self):
         """ command is used to read actuall controller data configurations from module SMIPDC """
@@ -1749,6 +1794,7 @@ class ModuleSMIPDC(Detector):
 
     def get_module_smipdc_default(self):
         """ command is used to read default configurations from module SMIPDC """
+        print('get module smipdc default method')
         obj = QueryMessage(obj_id=GET_MODULE_SMIPDC_DEFAULT)
         rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=self.write_and_read(obj))
 
@@ -1761,6 +1807,7 @@ class ModuleSMIPDC(Detector):
 
     def set_module_smipdc_default(self):
         """ command is used to set default configuration in SMIPDC module """
+        print('set module smipdc default method')
         det_u = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_U, data=self.module_smipdc_params_det_u, dtype=DTYPE_UINT16)
         det_i = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_DET_I, data=self.module_smipdc_params_det_i, dtype=DTYPE_UINT16)
         gain = SetMessage(obj_id=MODULE_SMIPDC_PARAMS_GAIN, data=self.module_smipdc_params_gain,
@@ -1932,13 +1979,34 @@ class ModuleSMIPDC(Detector):
 
 if __name__ == '__main__':
     with ModuleSMIPDC(m_port_name='COM5') as x:
+        print('init: ')
         x.get_device_iden()
         x.get_module_smipdc_default()
-        print('1')
-        print(x.module_smipdc_params_gain)
-        x.module_smipdc_params_gain = 20
-        print('2')
-        print(x.module_smipdc_params_gain)
-        print('3')
+        print('set module smipdc default:')
         x.set_module_smipdc_default()
-        print(x.module_smipdc_params_gain)
+
+        print('Service Mode: ', x.get_service_mode())
+        print('Device Iden: ', x.get_device_iden())
+        print('Default: ', x.get_module_smipdc_default())
+        print('user Set: ', x.get_module_smipdc_user_set())
+
+        print('Gain: ', x.module_smipdc_params_gain)
+
+        print('module smipdc params gain = 20')
+        x.module_smipdc_params_gain = 20
+        print('Gain: ', x.module_smipdc_params_gain)
+
+        print('module smipdc params gain = 30')
+        x.module_smipdc_params_gain = 30
+        print('set module smipdc user set')
+        x.set_module_smipdc_user_set()
+        print('Gain: ', x.module_smipdc_params_gain)
+
+        print('set module smipdc default: ')
+        x.set_module_smipdc_default()
+        print('Gain: ', x.module_smipdc_params_gain)
+
+        print('Service Mode: ', x.get_service_mode())
+        print('Device Iden: ', x.get_device_iden())
+        print('Default: ', x.get_module_smipdc_default())
+        print('user Set: ', x.get_module_smipdc_user_set())
