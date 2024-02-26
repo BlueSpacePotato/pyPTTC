@@ -393,22 +393,22 @@ class Detector:
         :param port_name: str with port name e.g. `com3` or `/dev/ttyUSB0`
         """
         print('Detector-class init')
-        self._serial = serial.Serial()
+        self.serial = serial.Serial()
         if port_name == 'auto':
             print('port_name == auto - if')
             try:
-                self._serial.port = self.find_com_port()
+                self.serial.port = self.find_com_port()
             except ConnectionError as ce:
                 raise IOError('Detector not found!')
         elif port_name == 'dummy':
             print('port_name == dummy')
-            self._serial.port = port_name
+            self.serial.port = port_name
         else:
-            self._serial.port = port_name
+            self.serial.port = port_name
             print('Port_name: ', port_name)
 
-        self._serial.baudrate = 57600
-        self._serial.timeout = 0.2
+        self.serial.baudrate = 57600
+        self.serial.timeout = 0.2
 
         self._connection_error = False
         self._status = 1
@@ -452,9 +452,9 @@ class Detector:
         print('enter-method')
         if not self._connection_error:
             try:
-                if self._context_depth == 0 and self._serial.port is not None and not self._serial.is_open:
-                    if self._serial.port != 'dummy':
-                        self._serial.open()
+                if self._context_depth == 0 and self.serial.port is not None and not self.serial.is_open:
+                    if self.serial.port != 'dummy':
+                        self.serial.open()
             except ConnectionError as ex:
                 self._connection_error = True
                 raise IOError(f'detector: error entering context: {ex}')
@@ -476,7 +476,7 @@ class Detector:
         print('exit method')
         self._context_depth -= 1
         if self._context_depth == 0:
-            self._serial.close()
+            self.serial.close()
         if exc:
             if exc is type(ConnectionError):
                 self._connection_error = True
@@ -512,9 +512,9 @@ class Detector:
             raise TypeError('Obj should be a BasicObject')
 
         mes = '$' + obj.get_field_data() + '#'
-        self._serial.write(mes.encode('UTF-8'))
+        self.serial.write(mes.encode('UTF-8'))
 
-        return self._serial.readline()
+        return self.serial.readline()
 
     # ----- CommonCommands -----------------------------------------------------------------------------------------
 
@@ -1757,27 +1757,27 @@ class ModuleSMIPDC(Detector):
         print('Module SMIPDC init')
         super().__init__(port_name=m_port_name)
         # module smipdc monitor
-        self.module_smipdc_monitor_sup_plus = 0000
-        self.module_smipdc_monitor_sup_minus = 0000
-        self.module_smipdc_monitor_fan_plus = 0000
-        self.module_smipdc_monitor_tec_plus = 0000
-        self.module_smipdc_monitor_tec_minus = 0000
-        self.module_smipdc_monitor_th1 = 0000
-        self.module_smipdc_monitor_th2 = 0000
-        self.module_smipdc_monitor_u_det = 0000
-        self.module_smipdc_monitor_u_1st = 0000
-        self.module_smipdc_monitor_u_out = 0000
-        self.module_smipdc_monitor_temp = 0000
+        self.module_smipdc_monitor_sup_plus = 0.0
+        self.module_smipdc_monitor_sup_minus = 0.0
+        self.module_smipdc_monitor_fan_plus = 0.0
+        self.module_smipdc_monitor_tec_plus = 0.0
+        self.module_smipdc_monitor_tec_minus = 0.0
+        self.module_smipdc_monitor_th1 = 0.0
+        self.module_smipdc_monitor_th2 = 0.0
+        self.module_smipdc_monitor_u_det = 0.0
+        self.module_smipdc_monitor_u_1st = 0.0
+        self.module_smipdc_monitor_u_out = 0.0
+        self.module_smipdc_monitor_temp = 0.0
 
         # module smipdc params
-        self.module_smipdc_params_det_u = 00
-        self.module_smipdc_params_det_i = 2328
-        self.module_smipdc_params_gain = 'DCD8'
-        self.module_smipdc_params_offset = 00
-        self.module_smipdc_params_varactor = 00
-        self.module_smipdc_params_trans = 00
-        self.module_smipdc_params_acdc = 00
-        self.module_smipdc_params_bw = 00
+        self.module_smipdc_params_det_u = 0
+        self.module_smipdc_params_det_i = 0
+        self.module_smipdc_params_gain = 0
+        self.module_smipdc_params_offset = 0
+        self.module_smipdc_params_varactor = 0
+        self.module_smipdc_params_trans = 0
+        self.module_smipdc_params_acdc = 0
+        self.module_smipdc_params_bw = 0
 
     def get_module_smipdc_monitor(self):
         """ command is used to read actuall controller data configurations from module SMIPDC """
@@ -1981,32 +1981,110 @@ if __name__ == '__main__':
     with ModuleSMIPDC(m_port_name='COM5') as x:
         print('init: ')
         x.get_device_iden()
-        x.get_module_smipdc_default()
-        print('set module smipdc default:')
-        x.set_module_smipdc_default()
+        # x.get_module_smipdc_default()
+        # x.set_module_smipdc_default()
 
-        print('Service Mode: ', x.get_service_mode())
-        print('Device Iden: ', x.get_device_iden())
-        print('Default: ', x.get_module_smipdc_default())
-        print('user Set: ', x.get_module_smipdc_user_set())
+        print(x.module_smipdc_params_det_u, x.module_smipdc_params_det_i, x.module_smipdc_params_gain,
+              x.module_smipdc_params_offset, x.module_smipdc_params_varactor, x.module_smipdc_params_trans,
+              x.module_smipdc_params_acdc, x.module_smipdc_params_bw)
+        # --------------------------------------------------------------------------------------------------------------
+        m_GET_SERVICE_MODE = '$04000004F300#'
+        rm_GET_SERVICE_MODE = b'$10000009101B0005002E09#'  # verursacht exit 1 und var alle = 0
 
-        print('Gain: ', x.module_smipdc_params_gain)
+        m_GET_SMARTTEC_CONFIG = '$050000040F01#'  # var = 0, exit 1
+        rm_GET_SMARTTEC_CONFIG = b'$1800000E1813000501182B000500D80B#'
 
-        print('module smipdc params gain = 20')
-        x.module_smipdc_params_gain = 20
-        print('Gain: ', x.module_smipdc_params_gain)
+        m_GET_MODULE_IDEN = '$08000004A303#'  # response message valid?  False, kein ret
+        rm_GET_MODULE_IDEN = b'$200000C92013000502202500060001203500060001204100247A6173696C61637A203234760000000000000000000000000000000000000000205A000800000000206100240000000000000000000000000000000000000000000000000000000000000000207A0008000000002089000C0000000000100574209300050120A300050120B800080000000020C800080000000020D800080000000020E800080000000020F8000800809243210800080080094521180008666E36452128000800000000218500060078BB83#'
 
-        print('module smipdc params gain = 30')
-        x.module_smipdc_params_gain = 30
-        print('set module smipdc user set')
-        x.set_module_smipdc_user_set()
-        print('Gain: ', x.module_smipdc_params_gain)
+        m_GET_MODULE_DEFAULT = '$084000047702#'  # antwort != rm, var 0 0
+        rm_GET_MODULE_DEFAULT = b'$240000332413000500242400062EE024340006D12024430005012453000500246500060000247400062EE024870008000382706255#'
 
-        print('set module smipdc default: ')
-        x.set_module_smipdc_default()
-        print('Gain: ', x.module_smipdc_params_gain)
+        m_GET_MODULE_SMIPDC_MONITOR = '$0A0000041B02#'  # antwort != rm, exit 1
+        rm_GET_MODULE_SMIPDC_MONITOR = b'$2C0000462C14000600002C24000600002C34000600002C44000600002C54000600002C64000600002C74000600002C84000600002C94000600002CA400600002CB400060000DCBC#'
 
-        print('Service Mode: ', x.get_service_mode())
-        print('Device Iden: ', x.get_device_iden())
-        print('Default: ', x.get_module_smipdc_default())
-        print('user Set: ', x.get_module_smipdc_user_set())
+        m_GET_MODULE_SMIPDC_DEFAULT = '$0A800004F303#'  # var alle = 0
+        rm_GET_MODULE_SMIPDC_DEFAULT = b'$30000031301500060000302500060000303500060000304500060000305500060000306300050030730005003083000500DCE3#'
+
+        m_GET_MODULE_SMIPDC_USER_SET = '$0AA000043902#'  # antwort != rm
+        rm_GET_MODULE_SMIPDC_USER_SET = b'$30000031301500060000302500060000303500060000304500060000305500060000306300050030730005003083000500DCE3#'
+
+        m_GET_MODULE_SMIPDC_USER_MIN = '$0AC000042702#'  # var alle = 0
+        rm_GET_MODULE_SMIPDC_USER_MIN = b'$30000031301500060000302500060000303500060000304500060000305500060000306300050030730005003083000500DCE3#'
+
+        m_GET_MODULE_SMIPDC_USER_MAX = '$0AE00004ED03#'  # var alle = 0
+        rm_GET_MODULE_SMIPDC_USER_MAX = b'$30000031301500060000302500060000303500060000304500060000305500060000306300050030730005003083000500DCE3#'
+
+        m_SET_MODULE_DEFAULT = '$085000372400003324130005FF24240006FFFF24340006FFFF24430005FF24530005FF24650006FFFF24740006FFFF24870008FFFFFFFF01FD#'
+        rm_SET_MODULE_DEFAULT = b'$2400003324130005FF24240006FFFF24340006FFFF24430005FF24530005FF24650006FFFF24740006FFFF24870008FFFFFFFFBA51#'  # response message valid?  False, var = 0
+
+        m_SET_MODULE_SMIPDC_DEFAULT = '$0A900035300000313015000600003025000600003035000600003045000600003055000600003063000500307300050030830005006C00#'
+        rm_SET_MODULE_SMIPDC_DEFAULT = b'$30000031301500060000302500060000303500060000304500060000305500060000306300050030730005003083000500DCE3#'  # response message valid?  False, var = 0
+
+        m_SET_MODULE_SMIPDC_USER_SET = '$0AB0003530000031301500060000302500060000303500060000304500060000305500060000306300050030730005003083000500DDBA#'
+        rm_SET_MODULE_SMIPDC_USER_SET = b'$30000031301500060000302500060000303500060000304500060000305500060000306300050030730005003083000500DCE3#'  # response message valid?  False, var = 0
+
+        m_SET_MODULE_SMIPDC_USER_MIN = '$0AD00035300000313015000600003025000600003035000600003045000600003055000600003063000500307300050030830005004F77#'
+        rm_SET_MODULE_SMIPDC_USER_MIN = b'$30000031301500060000302500060000303500060000304500060000305500060000306300050030730005003083000500DCE3#'  # var alle = 0
+
+        m_SET_MODULE_SMIPDC_USER_MAX = '$0AF0003530000031301500060000302500060000303500060000304500060000305500060000306300050030730005003083000500FECD#'
+        rm_SET_MODULE_SMIPDC_USER_MAX = b'$30000031301500060000302500060000303500060000304500060000305500060000306300050030730005003083000500DCE3#'  # response message valid?  False
+        # --------------------------------------------------------------------------------------------------------------
+
+        varvar = m_SET_MODULE_SMIPDC_USER_SET
+        a = rm_SET_MODULE_SMIPDC_USER_SET
+
+        x.serial.write(varvar.encode('UTF-8'))
+        ret = x.serial.readline()
+        print('return: ', ret)
+
+        rm = ResponseMessage(obj_id=MODULE_SMIPDC_PARAMS, data=ret)
+        print('response message valid? ', rm.is_valid())
+
+        print('Typ a: ', type(a), ' Typ rm: ', type(rm))
+
+        if a != rm:
+            idx = 0
+            print('for Schleife: ')
+            for yy, y in zip(a, ret):
+                if y != yy:
+                    print(idx, yy, y)
+                idx += 1
+
+        else:
+            print('Same')
+
+        if rm.is_valid():
+            x.module_smipdc_params_det_u, x.module_smipdc_params_det_i, x.module_smipdc_params_gain, \
+                x.module_smipdc_params_offset, x.module_smipdc_params_varactor, x.module_smipdc_params_trans, \
+                x.module_smipdc_params_acdc, x.module_smipdc_params_bw = rm.parse_data()
+
+        print(x.module_smipdc_params_det_u, x.module_smipdc_params_det_i, x.module_smipdc_params_gain,
+              x.module_smipdc_params_offset, x.module_smipdc_params_varactor, x.module_smipdc_params_trans,
+              x.module_smipdc_params_acdc, x.module_smipdc_params_bw)
+
+        #print('Service Mode: ', x.get_service_mode())
+        #print('Device Iden: ', x.get_device_iden())
+        #print('Default: ', x.get_module_smipdc_default())
+        #print('user Set: ', x.get_module_smipdc_user_set())
+
+        #print('Gain: ', x.module_smipdc_params_gain)
+
+        #print('module smipdc params gain = 20')
+        #x.module_smipdc_params_gain = 20
+        #print('Gain: ', x.module_smipdc_params_gain)
+
+        #print('module smipdc params gain = 30')
+        #x.module_smipdc_params_gain = 30
+        #print('Gain: ', x.module_smipdc_params_gain)
+
+        #x.set_module_smipdc_user_set()  # gain wieder auf 125
+        #print('Gain: ', x.module_smipdc_params_gain)
+
+        #x.set_module_smipdc_default()
+        #print('Gain: ', x.module_smipdc_params_gain)
+
+        #print('Service Mode: ', x.get_service_mode())
+        #print('Device Iden: ', x.get_device_iden())
+        #print('Default: ', x.get_module_smipdc_default())
+        #print('user Set: ', x.get_module_smipdc_user_set())
